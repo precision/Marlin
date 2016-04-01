@@ -44,12 +44,12 @@
 #define E0_DIR_PIN          0
 
 #define LED_PIN            -1
-#define FAN_PIN            -1
+#define FAN_PIN             4
 
 #if MB(AZTEEG_X1) || MB(STB_11) || MB(MELZI)
   #define FAN_PIN           4 // Works for Panelolu2 too
   #if MB(MELZI)
-    #define LED_PIN        27 // On some broken versions of the Sanguino libraries the pin definitions are wrong, so LED_PIN needs to be 28. But you should upgrade your Sanguino libraries! See #368.
+    #define LED_PIN        -1 // On some broken versions of the Sanguino libraries the pin definitions are wrong, so LED_PIN needs to be 28. But you should upgrade your Sanguino libraries! See #368.
   #elif MB(STB_11)
     #define LCD_PIN_BL     17 // LCD backlight LED
   #endif
@@ -60,7 +60,7 @@
 #endif
 
 #define PS_ON_PIN          -1
-#define KILL_PIN           -1
+#define KILL_PIN           10
 
 #define HEATER_0_PIN       13 // (extruder)
 #define HEATER_1_PIN       -1
@@ -112,9 +112,9 @@
     #if ENABLED(U8GLIB_ST7920) //SPI GLCD 12864 ST7920 ( like [www.digole.com] ) For Melzi V2.0
 
       #if MB(MELZI) // Melzi board
-        #define LCD_PINS_RS     30 //CS chip select /SS chip slave select
-        #define LCD_PINS_ENABLE 29 //SID (MOSI)
-        #define LCD_PINS_D4     17 //SCK (CLK) clock
+        #define LCD_PINS_RS     17 //CS chip select /SS chip slave select
+        #define LCD_PINS_ENABLE 16 //SID (MOSI)
+        #define LCD_PINS_D4     11 //SCK (CLK) clock
         #define BEEPER_PIN      27 // Pin 27 is taken by LED_PIN, but Melzi LED does nothing with Marlin so this can be used for BEEPER_PIN. You can use this pin with M42 instead of BEEPER_PIN.
       #else         // Sanguinololu 1.3
         #define LCD_PINS_RS      4
@@ -141,18 +141,18 @@
 
   #else // !DOGLCD - Standard Hitachi LCD controller
 
-    #define LCD_PINS_RS          4
-    #define LCD_PINS_ENABLE     17
-    #define LCD_PINS_D4         30
-    #define LCD_PINS_D5         29
-    #define LCD_PINS_D6         28
-    #define LCD_PINS_D7         27
+    #define LCD_PINS_RS         17
+    #define LCD_PINS_ENABLE     16
+    #define LCD_PINS_D4         11
+    #define LCD_PINS_D5         -1
+    #define LCD_PINS_D6         -1
+    #define LCD_PINS_D7         -1
 
   #endif // !DOGLCD
 
   //The encoder and click button
-  #define BTN_EN1               11
-  #define BTN_EN2               10
+  #define BTN_EN1               29
+  #define BTN_EN2               30
   #if ENABLED(LCD_I2C_PANELOLU2)
     #if MB(MELZI)
       #define BTN_ENC           29
@@ -161,8 +161,8 @@
       #define BTN_ENC           30
     #endif
   #else
-    #define BTN_ENC             16
-    #define LCD_SDSS            28 // Smart Controller SD card reader rather than the Melzi
+    #define BTN_ENC             28
+    #define LCD_SDSS            -1 // Smart Controller SD card reader rather than the Melzi
   #endif //Panelolu2
 
   #define SD_DETECT_PIN         -1

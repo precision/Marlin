@@ -64,7 +64,7 @@
    * If you get false positives for "Thermal Runaway" increase THERMAL_PROTECTION_HYSTERESIS and/or THERMAL_PROTECTION_PERIOD
    */
 #if ENABLED(THERMAL_PROTECTION_HOTENDS)
-  #define THERMAL_PROTECTION_PERIOD 40        // Seconds
+  #define THERMAL_PROTECTION_PERIOD 90        // Seconds
   #define THERMAL_PROTECTION_HYSTERESIS 4     // Degrees Celsius
 
   /**
@@ -495,7 +495,7 @@ const unsigned int dropsegments = 5; //everything with less than this number of 
 // until then, intended retractions can be detected by moves that only extrude and the direction.
 // the moves are than replaced by the firmware controlled ones.
 
-//#define FWRETRACT  //ONLY PARTIALLY TESTED
+#define FWRETRACT  //ONLY PARTIALLY TESTED
 #if ENABLED(FWRETRACT)
   #define MIN_RETRACT 0.1                //minimum extruded mm to accept a automatic gcode retraction attempt
   #define RETRACT_LENGTH 3               //default retract length (positive mm)

@@ -459,10 +459,12 @@
   #define TXD1        DIO11
 
   // SPI
-  #define SCK         DIO7
+//  #define SCK         DIO7
+  #define SCK         DI07
   #define MISO        DIO6
   #define MOSI        DIO5
-  #define SS          DIO4
+//  #define SS          DIO4
+  #define SS          DI04
 
   // TWI (I2C)
   #define SCL         DIO16

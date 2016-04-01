@@ -1147,13 +1147,24 @@ const short temptable_1047[][2] PROGMEM = {
 #endif
 
 #if (THERMISTORHEATER_0 == 999) || (THERMISTORHEATER_1 == 999) || (THERMISTORHEATER_2 == 999) || (THERMISTORHEATER_3 == 999) || (THERMISTORBED == 999) //User defined table
-  // Dummy Thermistor table.. It will ALWAYS read a fixed value.
-  #ifndef DUMMY_THERMISTOR_999_VALUE
-    #define DUMMY_THERMISTOR_999_VALUE 25
-  #endif
   const short temptable_999[][2] PROGMEM = {
-    {1 * OVERSAMPLENR, DUMMY_THERMISTOR_999_VALUE},
-    {1023 * OVERSAMPLENR, DUMMY_THERMISTOR_999_VALUE}
+	{0, 4000},
+	{660 * 4, 129}, 
+	{683 * 4, 123}, 
+	{898 * 4, 116}, 
+	{995 * 4, 110},
+	{1063 * 4, 109}, 
+	{1259 * 4, 100}, 
+	{1635 * 4, 92}, 
+	{2288 * 4, 70}, 
+	{2683 * 4, 60},
+	{2660 * 4, 59},
+	{2924 * 4, 55}, 
+	{3408 * 4, 39}, 
+	{3608 * 4, 30}, 
+	{3780 * 4, 20},
+	{3808 * 4, 17},
+	{4095 * 4, -440}
 };
 #endif
 
