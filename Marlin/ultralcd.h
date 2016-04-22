@@ -24,8 +24,13 @@
 #define ULTRALCD_H
 
 #include "Marlin.h"
+
 #if ENABLED(ULTRA_LCD)
+
   #include "buzzer.h"
+
+  #define BUTTON_EXISTS(BN) (defined(BTN_## BN) && BTN_## BN >= 0)
+  #define BUTTON_PRESSED(BN) !READ(BTN_## BN)
 
   int lcd_strlen(const char* s);
   int lcd_strlen_P(const char* s);
@@ -76,15 +81,13 @@
 
   extern bool cancel_heatup;
 
-  extern uint8_t blink; // Variable for animation
-
   #if ENABLED(FILAMENT_LCD_DISPLAY)
     extern millis_t previous_lcd_status_ms;
   #endif
   void lcd_quick_feedback(); // Audible feedback for a button click - could also be visual
   bool lcd_clicked();
-
   void lcd_ignore_click(bool b=true);
+  bool lcd_blink();
 
   #if ENABLED(NEWPANEL)
     #define EN_C (_BV(BLEN_C))
@@ -142,10 +145,10 @@
 #endif //ULTRA_LCD
 
 char* itostr2(const uint8_t& x);
-char* itostr31(const int& xx);
-char* itostr3(const int& xx);
-char* itostr3left(const int& xx);
-char* itostr4(const int& xx);
+char* itostr31(const int& x);
+char* itostr3(const int& x);
+char* itostr3left(const int& x);
+char* itostr4(const int& x);
 char* itostr4sign(const int& x);
 
 char* ftostr3(const float& x);
@@ -153,7 +156,7 @@ char* ftostr4sign(const float& x);
 char* ftostr31ns(const float& x); // float to string without sign character
 char* ftostr31(const float& x);
 char* ftostr32(const float& x);
-char* ftostr43(const float& x);
+char* ftostr43(const float& x, char plus=' ');
 char* ftostr12ns(const float& x);
 char* ftostr32sp(const float& x); // remove zero-padding from ftostr32
 char* ftostr5(const float& x);

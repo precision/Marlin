@@ -29,7 +29,7 @@
  *
  * With the use of:
  * u8glib by Oliver Kraus
- * http://code.google.com/p/u8glib/
+ * https://github.com/olikraus/U8glib_Arduino
  * License: http://opensource.org/licenses/BSD-3-Clause
  */
 
@@ -304,10 +304,16 @@ static void _draw_heater_status(int x, int heater) {
 static void lcd_implementation_status_screen() {
   u8g.setColorIndex(1); // black on white
 
-  #if HAS_FAN0
-    // Symbols menu graphics, animated fan
-    u8g.drawBitmapP(9, 1, STATUS_SCREENBYTEWIDTH, STATUS_SCREENHEIGHT, (blink % 2) && fanSpeeds[0] ? status_screen0_bmp : status_screen1_bmp);
-  #endif
+  bool blink = lcd_blink();
+
+  // Symbols menu graphics, animated fan
+  u8g.drawBitmapP(9, 1, STATUS_SCREENBYTEWIDTH, STATUS_SCREENHEIGHT,
+    #if HAS_FAN0
+      blink && fanSpeeds[0] ? status_screen0_bmp : status_screen1_bmp
+    #else
+      status_screen0_bmp
+    #endif
+  );
 
   #if ENABLED(SDSUPPORT)
     // SD Card Symbol
@@ -375,18 +381,19 @@ static void lcd_implementation_status_screen() {
   #endif
   u8g.setColorIndex(0); // white on black
   u8g.setPrintPos(2, XYZ_BASELINE);
-  if (blink & 1)
-    lcd_printPGM(PSTR("X"));
+  if (blink)
+    lcd_printPGM(PSTR(MSG_X));
   else {
     if (!axis_homed[X_AXIS])
       lcd_printPGM(PSTR("?"));
-    else
+    else {
       #if DISABLED(DISABLE_REDUCED_ACCURACY_WARNING)
         if (!axis_known_position[X_AXIS])
           lcd_printPGM(PSTR(" "));
         else
       #endif
-      lcd_printPGM(PSTR("X"));
+      lcd_printPGM(PSTR(MSG_X));
+    }
   }
   u8g.drawPixel(8, XYZ_BASELINE - 5);
   u8g.drawPixel(8, XYZ_BASELINE - 3);
@@ -394,18 +401,19 @@ static void lcd_implementation_status_screen() {
   lcd_print(ftostr31ns(current_position[X_AXIS]));
 
   u8g.setPrintPos(43, XYZ_BASELINE);
-  if (blink & 1)
-    lcd_printPGM(PSTR("Y"));
+  if (blink)
+    lcd_printPGM(PSTR(MSG_Y));
   else {
     if (!axis_homed[Y_AXIS])
       lcd_printPGM(PSTR("?"));
-    else
+    else {
       #if DISABLED(DISABLE_REDUCED_ACCURACY_WARNING)
         if (!axis_known_position[Y_AXIS])
           lcd_printPGM(PSTR(" "));
         else
       #endif
-      lcd_printPGM(PSTR("Y"));
+      lcd_printPGM(PSTR(MSG_Y));
+    }
   }
   u8g.drawPixel(49, XYZ_BASELINE - 5);
   u8g.drawPixel(49, XYZ_BASELINE - 3);
@@ -413,18 +421,19 @@ static void lcd_implementation_status_screen() {
   lcd_print(ftostr31ns(current_position[Y_AXIS]));
 
   u8g.setPrintPos(83, XYZ_BASELINE);
-  if (blink & 1)
-    lcd_printPGM(PSTR("Z"));
+  if (blink)
+    lcd_printPGM(PSTR(MSG_Z));
   else {
     if (!axis_homed[Z_AXIS])
       lcd_printPGM(PSTR("?"));
-    else
+    else {
       #if DISABLED(DISABLE_REDUCED_ACCURACY_WARNING)
         if (!axis_known_position[Z_AXIS])
           lcd_printPGM(PSTR(" "));
         else
       #endif
-      lcd_printPGM(PSTR("Z"));
+      lcd_printPGM(PSTR(MSG_Z));
+    }
   }
   u8g.drawPixel(89, XYZ_BASELINE - 5);
   u8g.drawPixel(89, XYZ_BASELINE - 3);
@@ -557,9 +566,11 @@ void lcd_implementation_drawedit(const char* pstr, const char* value) {
 
   u8g.setPrintPos(0, rowHeight + kHalfChar);
   lcd_printPGM(pstr);
-  lcd_print(':');
-  u8g.setPrintPos((lcd_width - 1 - vallen) * char_width, rows * rowHeight + kHalfChar);
-  lcd_print(value);
+  if (value != NULL) {
+    lcd_print(':');
+    u8g.setPrintPos((lcd_width - 1 - vallen) * char_width, rows * rowHeight + kHalfChar);
+    lcd_print(value);
+  }
 }
 
 #if ENABLED(SDSUPPORT)
