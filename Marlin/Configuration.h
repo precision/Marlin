@@ -446,15 +446,15 @@
 //#define USE_ZMAX_PLUG
 
 // coarse Endstop Settings
-#define ENDSTOPPULLUPS // Comment this out (using // at the start of the line) to disable the endstop pullup resistors
+//#define ENDSTOPPULLUPS // Comment this out (using // at the start of the line) to disable the endstop pullup resistors
 
 #if DISABLED(ENDSTOPPULLUPS)
   // fine endstop settings: Individual pullups. will be ignored if ENDSTOPPULLUPS is defined
   //#define ENDSTOPPULLUP_XMAX
   //#define ENDSTOPPULLUP_YMAX
   //#define ENDSTOPPULLUP_ZMAX
-  //#define ENDSTOPPULLUP_XMIN
-  //#define ENDSTOPPULLUP_YMIN
+  #define ENDSTOPPULLUP_XMIN
+  #define ENDSTOPPULLUP_YMIN
   //#define ENDSTOPPULLUP_ZMIN
   //#define ENDSTOPPULLUP_ZMIN_PROBE
 #endif
@@ -554,11 +554,11 @@
 // For example an inductive probe, or a setup that uses the nozzle to probe.
 // An inductive probe must be deactivated to go below
 // its trigger-point if hardware endstops are active.
-//#define FIX_MOUNTED_PROBE
+#define FIX_MOUNTED_PROBE
 
 // The BLTouch probe emulates a servo probe.
 // The default connector is SERVO 0. Set Z_ENDSTOP_SERVO_NR below to override.
-#define BLTOUCH
+//#define BLTOUCH
 
 // Z Servo Probe, such as an endstop switch on a rotating arm.
 //#define Z_ENDSTOP_SERVO_NR 0
@@ -646,7 +646,7 @@
 // To use a probe you must enable one of the two options above!
 
 // Enable Z Probe Repeatability test to see how accurate your probe is
-//#define Z_MIN_PROBE_REPEATABILITY_TEST
+#define Z_MIN_PROBE_REPEATABILITY_TEST
 
 /**
  * Z probes require clearance when deploying, stowing, and moving between
@@ -724,7 +724,7 @@
 // @section machine
 
 // Travel limits after homing (units are in mm)
-#define X_MIN_POS -5
+#define X_MIN_POS 0
 #define Y_MIN_POS 0
 #define Z_MIN_POS 0
 #define X_MAX_POS 300
@@ -1403,7 +1403,7 @@
 //#define BLINKM
 
 // Support for an RGB LED using 3 separate pins with optional PWM
-//#define RGB_LED
+#define RGB_LED
 #if ENABLED(RGB_LED)
   #define RGB_LED_R_PIN 34
   #define RGB_LED_G_PIN 43
