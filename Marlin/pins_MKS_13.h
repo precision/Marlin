@@ -43,6 +43,9 @@
 
 #include "pins_RAMPS.h"
 
+// I'm reusing the ZMAX for my runout sensor
+#define FIL_RUNOUT_PIN      19
+
 //
 // LCD / Controller
 //
