@@ -108,7 +108,7 @@
 
 // Serial Console Messages (do not translate those!)
 
-#define MSG_Enqueueing                      "enqueueing \""
+#define MSG_ENQUEUEING                      "enqueueing \""
 #define MSG_POWERUP                         "PowerUp"
 #define MSG_EXTERNAL_RESET                  " External Reset"
 #define MSG_BROWNOUT_RESET                  " Brown out Reset"
@@ -268,22 +268,27 @@
 #define MSG_H2 "2"
 #define MSG_H3 "3"
 #define MSG_H4 "4"
+#define MSG_H5 "5"
 #define MSG_N1 " 1"
 #define MSG_N2 " 2"
 #define MSG_N3 " 3"
 #define MSG_N4 " 4"
+#define MSG_N5 " 5"
 #define MSG_E1 "E1"
 #define MSG_E2 "E2"
 #define MSG_E3 "E3"
 #define MSG_E4 "E4"
+#define MSG_E5 "E5"
 #define MSG_MOVE_E1 "1"
 #define MSG_MOVE_E2 "2"
 #define MSG_MOVE_E3 "3"
 #define MSG_MOVE_E4 "4"
+#define MSG_MOVE_E5 "5"
 #define MSG_DIAM_E1 " 1"
 #define MSG_DIAM_E2 " 2"
 #define MSG_DIAM_E3 " 3"
 #define MSG_DIAM_E4 " 4"
+#define MSG_DIAM_E5 " 5"
 
 #include INCLUDE_LANGUAGE
 
@@ -293,7 +298,8 @@
  && DISABLED(DISPLAY_CHARSET_ISO10646_KANA) \
  && DISABLED(DISPLAY_CHARSET_ISO10646_GREEK) \
  && DISABLED(DISPLAY_CHARSET_ISO10646_CN) \
- && DISABLED(DISPLAY_CHARSET_ISO10646_TR)
+ && DISABLED(DISPLAY_CHARSET_ISO10646_TR) \
+ && DISABLED(DISPLAY_CHARSET_ISO10646_PL)
   #define DISPLAY_CHARSET_ISO10646_1 // use the better font on full graphic displays.
 #endif
 
