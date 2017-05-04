@@ -355,7 +355,7 @@
   #define MSG_DWELL                           _UxGT("Sleep...")
 #endif
 #ifndef MSG_USERWAIT
-  #define MSG_USERWAIT                        _UxGT("Wait for user...")
+  #define MSG_USERWAIT                        _UxGT("Click to resume...")
 #endif
 #ifndef MSG_RESUMING
   #define MSG_RESUMING                        _UxGT("Resuming print")
@@ -416,6 +416,12 @@
 #endif
 #ifndef MSG_BLTOUCH_RESET
   #define MSG_BLTOUCH_RESET                   _UxGT("Reset BLTouch")
+#endif
+#ifndef MSG_BLTOUCH_DEPLOY
+  #define MSG_BLTOUCH_DEPLOY                  _UxGT("Deploy BLTouch")
+#endif
+#ifndef MSG_BLTOUCH_STOW
+  #define MSG_BLTOUCH_STOW                    _UxGT("Stow BLTouch")
 #endif
 #ifndef MSG_HOME
   #define MSG_HOME                            _UxGT("Home") // Used as MSG_HOME " " MSG_X MSG_Y MSG_Z " " MSG_FIRST
