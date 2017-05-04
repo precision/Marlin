@@ -572,11 +572,6 @@
 
 // @section lcd
 
-// Babystepping enables the user to control the axis in tiny amounts, independently from the normal printing process
-// it can e.g. be used to change z-positions in the print startup phase in real-time
-// does not respect endstops!
-#define BABYSTEPPING
-
 /**
  * Babystepping enables movement of the axes by tiny increments without changing
  * the current position values. This feature is used primarily to adjust the Z
@@ -584,7 +579,7 @@
  *
  * Warning: Does not respect endstops!
  */
-//#define BABYSTEPPING
+#define BABYSTEPPING
 #if ENABLED(BABYSTEPPING)
   #define BABYSTEP_XY              // Also enable X/Y Babystepping. Not supported on DELTA!
   #define BABYSTEP_INVERT_Z false  // Change if Z babysteps should go the other way
