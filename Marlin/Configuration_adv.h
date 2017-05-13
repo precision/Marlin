@@ -764,8 +764,6 @@
   #define RETRACT_RECOVER_FEEDRATE 8     //default feedrate for recovering from retraction (mm/s)
 #endif
 
-#endif
-
 /**
  * Filament Change
  * Experimental filament change support.
