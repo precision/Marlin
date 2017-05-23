@@ -45,34 +45,38 @@
  *
  * "G" Codes
  *
- * G0  -> G1
- * G1  - Coordinated Movement X Y Z E
- * G2  - CW ARC
- * G3  - CCW ARC
- * G4  - Dwell S<seconds> or P<milliseconds>
- * G5  - Cubic B-spline with XYZE destination and IJPQ offsets
- * G10 - Retract filament according to settings of M207
- * G11 - Retract recover filament according to settings of M208
- * G12 - Clean tool
- * G20 - Set input units to inches
- * G21 - Set input units to millimeters
- * G26 - Mesh Validation Pattern (Requires UBL_G26_MESH_EDITING)
- * G27 - Park Nozzle (Requires NOZZLE_PARK_FEATURE)
- * G28 - Home one or more axes
- * G29 - Detailed Z probe, probes the bed at 3 or more points.  Will fail if you haven't homed yet.
- * G30 - Single Z probe, probes bed at X Y location (defaults to current XY location)
- * G31 - Dock sled (Z_PROBE_SLED only)
- * G32 - Undock sled (Z_PROBE_SLED only)
- * G33 - Delta Auto-Calibration (Requires DELTA_AUTO_CALIBRATION)
- * G38 - Probe target - similar to G28 except it uses the Z_MIN_PROBE for all three axes
- * G90 - Use Absolute Coordinates
- * G91 - Use Relative Coordinates
- * G92 - Set current position to coordinates given
+ * G0   -> G1
+ * G1   - Coordinated Movement X Y Z E
+ * G2   - CW ARC
+ * G3   - CCW ARC
+ * G4   - Dwell S<seconds> or P<milliseconds>
+ * G5   - Cubic B-spline with XYZE destination and IJPQ offsets
+ * G10  - Retract filament according to settings of M207
+ * G11  - Retract recover filament according to settings of M208
+ * G12  - Clean tool
+ * G20  - Set input units to inches
+ * G21  - Set input units to millimeters
+ * G26  - Mesh Validation Pattern (Requires UBL_G26_MESH_VALIDATION)
+ * G27  - Park Nozzle (Requires NOZZLE_PARK_FEATURE)
+ * G28  - Home one or more axes
+ * G29  - Detailed Z probe, probes the bed at 3 or more points.  Will fail if you haven't homed yet.
+ * G30  - Single Z probe, probes bed at X Y location (defaults to current XY location)
+ * G31  - Dock sled (Z_PROBE_SLED only)
+ * G32  - Undock sled (Z_PROBE_SLED only)
+ * G33  - Delta Auto-Calibration (Requires DELTA_AUTO_CALIBRATION)
+ * G38  - Probe target - similar to G28 except it uses the Z_MIN_PROBE for all three axes
+ * G42  - Coordinated move to a mesh point (Requires AUTO_BED_LEVELING_UBL)
+ * G90  - Use Absolute Coordinates
+ * G91  - Use Relative Coordinates
+ * G92  - Set current position to coordinates given
  *
  * "M" Codes
  *
  * M0   - Unconditional stop - Wait for user to press a button on the LCD (Only if ULTRA_LCD is enabled)
  * M1   - Same as M0
+ * M3   - Turn laser/spindle on, set spindle/laser speed/power, set rotation to clockwise
+ * M4   - Turn laser/spindle on, set spindle/laser speed/power, set rotation to counter-clockwise
+ * M5   - Turn laser/spindle off
  * M17  - Enable/Power all stepper motors
  * M18  - Disable all stepper motors; same as M84
  * M20  - List SD card. (Requires SDSUPPORT)
@@ -1680,7 +1684,7 @@ void do_blocking_move_to(const float &x, const float &y, const float &z, const f
 
   #if ENABLED(DELTA)
 
-    if ( ! position_is_reachable_xy( x, y )) return;
+    if (!position_is_reachable_xy(x, y)) return;
 
     feedrate_mm_s = fr_mm_s ? fr_mm_s : XY_PROBE_FEEDRATE_MM_S;
 
@@ -1736,7 +1740,7 @@ void do_blocking_move_to(const float &x, const float &y, const float &z, const f
 
   #elif IS_SCARA
 
-    if ( ! position_is_reachable_xy( x, y )) return;
+    if (!position_is_reachable_xy(x, y)) return;
 
     set_destination_to_current();
 
@@ -1853,9 +1857,15 @@ static void clean_up_after_endstop_or_probe_move() {
 #if HAS_PROBING_PROCEDURE || HOTENDS > 1 || ENABLED(Z_PROBE_ALLEN_KEY) || ENABLED(Z_PROBE_SLED) || ENABLED(NOZZLE_CLEAN_FEATURE) || ENABLED(NOZZLE_PARK_FEATURE) || ENABLED(DELTA_AUTO_CALIBRATION)
 
   bool axis_unhomed_error(const bool x/*=true*/, const bool y/*=true*/, const bool z/*=true*/) {
+#if ENABLED(HOME_AFTER_DEACTIVATE)
     const bool xx = x && !axis_known_position[X_AXIS],
                yy = y && !axis_known_position[Y_AXIS],
                zz = z && !axis_known_position[Z_AXIS];
+#else
+    const bool xx = x && !axis_homed[X_AXIS],
+               yy = y && !axis_homed[Y_AXIS],
+               zz = z && !axis_homed[Z_AXIS];
+#endif
     if (xx || yy || zz) {
       SERIAL_ECHO_START;
       SERIAL_ECHOPGM(MSG_HOME " ");
@@ -2345,7 +2355,7 @@ static void clean_up_after_endstop_or_probe_move() {
    *   - Raise to the BETWEEN height
    * - Return the probed Z position
    */
-  float probe_pt(const float x, const float y, const bool stow/*=true*/, const int verbose_level/*=1*/) {
+  float probe_pt(const float &x, const float &y, const bool stow/*=true*/, const int verbose_level/*=1*/) {
     #if ENABLED(DEBUG_LEVELING_FEATURE)
       if (DEBUGGING(LEVELING)) {
         SERIAL_ECHOPAIR(">>> probe_pt(", x);
@@ -2356,7 +2366,7 @@ static void clean_up_after_endstop_or_probe_move() {
       }
     #endif
 
-    if ( ! position_is_reachable_by_probe_xy( x, y )) return NAN;
+    if (!position_is_reachable_by_probe_xy(x, y)) return NAN;
 
     const float old_feedrate_mm_s = feedrate_mm_s;
 
@@ -3009,12 +3019,12 @@ static void homeaxis(const AxisEnum axis) {
     // so here it re-homes each tower in turn.
     // Delta homing treats the axes as normal linear axes.
 
-    // retrace by the amount specified in endstop_adj
-    if (endstop_adj[axis] * Z_HOME_DIR < 0) {
+    // retrace by the amount specified in endstop_adj + additional 0.1mm in order to have minimum steps
+    if (endstop_adj[axis] * Z_HOME_DIR <= 0) {
       #if ENABLED(DEBUG_LEVELING_FEATURE)
         if (DEBUGGING(LEVELING)) SERIAL_ECHOLNPGM("endstop_adj:");
       #endif
-      do_homing_move(axis, endstop_adj[axis]);
+      do_homing_move(axis, endstop_adj[axis] - 0.1);
     }
 
   #else
@@ -3665,7 +3675,7 @@ inline void gcode_G4() {
       destination[Y_AXIS] -= Y_PROBE_OFFSET_FROM_EXTRUDER;
     #endif
 
-    if ( position_is_reachable_xy( destination[X_AXIS], destination[Y_AXIS] )) {
+    if (position_is_reachable_xy(destination[X_AXIS], destination[Y_AXIS])) {
 
       #if ENABLED(DEBUG_LEVELING_FEATURE)
         if (DEBUGGING(LEVELING)) DEBUG_POS("Z_SAFE_HOMING", destination);
@@ -3713,7 +3723,7 @@ inline void gcode_G4() {
  *  Z   Home to the Z endstop
  *
  */
-inline void gcode_G28() {
+inline void gcode_G28(const bool always_home_all) {
 
   #if ENABLED(DEBUG_LEVELING_FEATURE)
     if (DEBUGGING(LEVELING)) {
@@ -3760,14 +3770,16 @@ inline void gcode_G28() {
 
   #else // NOT DELTA
 
-    const bool homeX = code_seen('X'), homeY = code_seen('Y'), homeZ = code_seen('Z'),
-               home_all_axis = (!homeX && !homeY && !homeZ) || (homeX && homeY && homeZ);
+    const bool homeX = always_home_all || code_seen('X'),
+               homeY = always_home_all || code_seen('Y'),
+               homeZ = always_home_all || code_seen('Z'),
+               home_all = (!homeX && !homeY && !homeZ) || (homeX && homeY && homeZ);
 
     set_destination_to_current();
 
     #if Z_HOME_DIR > 0  // If homing away from BED do Z first
 
-      if (home_all_axis || homeZ) {
+      if (home_all || homeZ) {
         HOMEAXIS(Z);
         #if ENABLED(DEBUG_LEVELING_FEATURE)
           if (DEBUGGING(LEVELING)) DEBUG_POS("> HOMEAXIS(Z)", current_position);
@@ -3776,7 +3788,7 @@ inline void gcode_G28() {
 
     #else
 
-      if (home_all_axis || homeX || homeY) {
+      if (home_all || homeX || homeY) {
         // Raise Z before homing any other axes and z is not already high enough (never lower z)
         destination[Z_AXIS] = LOGICAL_Z_POSITION(Z_HOMING_HEIGHT);
         if (destination[Z_AXIS] > current_position[Z_AXIS]) {
@@ -3794,14 +3806,14 @@ inline void gcode_G28() {
 
     #if ENABLED(QUICK_HOME)
 
-      if (home_all_axis || (homeX && homeY)) quick_home_xy();
+      if (home_all || (homeX && homeY)) quick_home_xy();
 
     #endif
 
     #if ENABLED(HOME_Y_BEFORE_X)
 
       // Home Y
-      if (home_all_axis || homeY) {
+      if (home_all || homeY) {
         HOMEAXIS(Y);
         #if ENABLED(DEBUG_LEVELING_FEATURE)
           if (DEBUGGING(LEVELING)) DEBUG_POS("> homeY", current_position);
@@ -3811,7 +3823,7 @@ inline void gcode_G28() {
     #endif
 
     // Home X
-    if (home_all_axis || homeX) {
+    if (home_all || homeX) {
 
       #if ENABLED(DUAL_X_CARRIAGE)
 
@@ -3844,7 +3856,7 @@ inline void gcode_G28() {
 
     #if DISABLED(HOME_Y_BEFORE_X)
       // Home Y
-      if (home_all_axis || homeY) {
+      if (home_all || homeY) {
         HOMEAXIS(Y);
         #if ENABLED(DEBUG_LEVELING_FEATURE)
           if (DEBUGGING(LEVELING)) DEBUG_POS("> homeY", current_position);
@@ -3854,16 +3866,16 @@ inline void gcode_G28() {
 
     // Home Z last if homing towards the bed
     #if Z_HOME_DIR < 0
-      if (home_all_axis || homeZ) {
+      if (home_all || homeZ) {
         #if ENABLED(Z_SAFE_HOMING)
           home_z_safely();
         #else
           HOMEAXIS(Z);
         #endif
         #if ENABLED(DEBUG_LEVELING_FEATURE)
-          if (DEBUGGING(LEVELING)) DEBUG_POS("> (home_all_axis || homeZ) > final", current_position);
+          if (DEBUGGING(LEVELING)) DEBUG_POS("> (home_all || homeZ) > final", current_position);
         #endif
-      } // home_all_axis || homeZ
+      } // home_all || homeZ
     #endif // Z_HOME_DIR < 0
 
     SYNC_PLAN_POSITION_KINEMATIC();
@@ -3895,7 +3907,7 @@ inline void gcode_G28() {
   #endif
 } // G28
 
-void home_all_axes() { gcode_G28(); }
+void home_all_axes() { gcode_G28(true); }
 
 #if HAS_PROBING_PROCEDURE
 
@@ -3938,7 +3950,7 @@ void home_all_axes() { gcode_G28(); }
 #if ENABLED(MESH_BED_LEVELING)
 
   // Save 130 bytes with non-duplication of PSTR
-  void say_not_entered() { SERIAL_PROTOCOLLNPGM(" not entered."); }
+  void echo_not_entered() { SERIAL_PROTOCOLLNPGM(" not entered."); }
 
   void mbl_mesh_report() {
     SERIAL_PROTOCOLLNPGM("Num X,Y: " STRINGIFY(GRID_MAX_POINTS_X) "," STRINGIFY(GRID_MAX_POINTS_Y));
@@ -4069,7 +4081,7 @@ void home_all_axes() { gcode_G28(); }
           }
         }
         else {
-          SERIAL_CHAR('X'); say_not_entered();
+          SERIAL_CHAR('X'); echo_not_entered();
           return;
         }
 
@@ -4081,7 +4093,7 @@ void home_all_axes() { gcode_G28(); }
           }
         }
         else {
-          SERIAL_CHAR('Y'); say_not_entered();
+          SERIAL_CHAR('Y'); echo_not_entered();
           return;
         }
 
@@ -4089,7 +4101,7 @@ void home_all_axes() { gcode_G28(); }
           mbl.z_values[px][py] = code_value_linear_units();
         }
         else {
-          SERIAL_CHAR('Z'); say_not_entered();
+          SERIAL_CHAR('Z'); echo_not_entered();
           return;
         }
         break;
@@ -4099,7 +4111,7 @@ void home_all_axes() { gcode_G28(); }
           mbl.z_offset = code_value_linear_units();
         }
         else {
-          SERIAL_CHAR('Z'); say_not_entered();
+          SERIAL_CHAR('Z'); echo_not_entered();
           return;
         }
         break;
@@ -4589,7 +4601,8 @@ void home_all_axes() { gcode_G28(); }
             indexIntoAB[xCount][yCount] = abl_probe_index;
           #endif
 
-          if (position_is_reachable_xy( xProbe, yProbe )) break;
+          // Keep looping till a reachable point is found
+          if (position_is_reachable_xy(xProbe, yProbe)) break;
           ++abl_probe_index;
         }
 
@@ -4700,7 +4713,7 @@ void home_all_axes() { gcode_G28(); }
 
             #if IS_KINEMATIC
               // Avoid probing outside the round or hexagonal area
-              if (!position_is_reachable_by_probe_xy( xProbe, yProbe )) continue;
+              if (!position_is_reachable_by_probe_xy(xProbe, yProbe)) continue;
             #endif
 
             measured_z = faux ? 0.001 * random(-100, 101) : probe_pt(xProbe, yProbe, stow_probe_after_each, verbose_level);
@@ -4738,12 +4751,12 @@ void home_all_axes() { gcode_G28(); }
           // Retain the last probe position
           xProbe = LOGICAL_X_POSITION(points[i].x);
           yProbe = LOGICAL_Y_POSITION(points[i].y);
-          measured_z = points[i].z = faux ? 0.001 * random(-100, 101) : probe_pt(xProbe, yProbe, stow_probe_after_each, verbose_level);
-        }
-
-        if (isnan(measured_z)) {
-          planner.abl_enabled = abl_should_enable;
-          return;
+          measured_z = faux ? 0.001 * random(-100, 101) : probe_pt(xProbe, yProbe, stow_probe_after_each, verbose_level);
+          if (isnan(measured_z)) {
+            planner.abl_enabled = abl_should_enable;
+            return;
+          }
+          points[i].z = measured_z;
         }
 
         if (!dryrun) {
@@ -5005,7 +5018,7 @@ void home_all_axes() { gcode_G28(); }
     const float xpos = code_seen('X') ? code_value_linear_units() : current_position[X_AXIS] + X_PROBE_OFFSET_FROM_EXTRUDER,
                 ypos = code_seen('Y') ? code_value_linear_units() : current_position[Y_AXIS] + Y_PROBE_OFFSET_FROM_EXTRUDER;
 
-    if (!position_is_reachable_by_probe_xy( xpos, ypos )) return;
+    if (!position_is_reachable_by_probe_xy(xpos, ypos)) return;
 
     // Disable leveling so the planner won't mess with us
     #if HAS_LEVELING
@@ -5016,9 +5029,11 @@ void home_all_axes() { gcode_G28(); }
 
     const float measured_z = probe_pt(xpos, ypos, !code_seen('S') || code_value_bool(), 1);
 
-    SERIAL_PROTOCOLPAIR("Bed X: ", FIXFLOAT(xpos));
-    SERIAL_PROTOCOLPAIR(" Y: ", FIXFLOAT(ypos));
-    SERIAL_PROTOCOLLNPAIR(" Z: ", FIXFLOAT(measured_z));
+    if (!isnan(measured_z)) {
+      SERIAL_PROTOCOLPAIR("Bed X: ", FIXFLOAT(xpos));
+      SERIAL_PROTOCOLPAIR(" Y: ", FIXFLOAT(ypos));
+      SERIAL_PROTOCOLLNPAIR(" Z: ", FIXFLOAT(measured_z));
+    }
 
     clean_up_after_endstop_or_probe_move();
 
@@ -5046,20 +5061,18 @@ void home_all_axes() { gcode_G28(); }
      *
      * Parameters:
      *
-     *   P  Number of probe points:
+     *   Pn  Number of probe points:
      *
      *      P1     Probe center and set height only.
      *      P2     Probe center and towers. Set height, endstops, and delta radius.
      *      P3     Probe all positions: center, towers and opposite towers. Set all.
      *      P4-P7  Probe all positions at different locations and average them.
      *
-     *   A  Abort delta height calibration after 1 probe (only P1)
+     *   T   Don't calibrate tower angle corrections
      *
-     *   O  Use opposite tower points instead of tower points (only P2)
+     *   Cn.nn Calibration precision; when omitted calibrates to maximum precision
      *
-     *   T  Don't calibrate tower angle corrections (P3-P7)
-     *
-     *   V  Verbose level:
+     *   Vn  Verbose level:
      *
      *      V0  Dry-run mode. Report settings and probe results. No calibration.
      *      V1  Report settings
@@ -5079,30 +5092,58 @@ void home_all_axes() { gcode_G28(); }
         return;
       }
 
-      const bool do_height_only       = probe_points == 1,
-                 do_center_and_towers = probe_points == 2,
-                 do_all_positions     = probe_points == 3,
-                 do_circle_x2         = probe_points == 5,
-                 do_circle_x3         = probe_points == 6,
-                 do_circle_x4         = probe_points == 7,
-                 probe_center_plus_3  = probe_points >= 3,
-                 point_averaging      = probe_points >= 4,
-                 probe_center_plus_6  = probe_points >= 5;
+      const float calibration_precision = code_seen('C') ? code_value_float() : 0.0;
+      if (calibration_precision < 0) {
+        SERIAL_PROTOCOLLNPGM("?(C)alibration precision is implausible (>0).");
+        return;
+      }
 
-      const char negating_parameter = do_height_only ? 'A' : do_center_and_towers ? 'O' : 'T';
-      int8_t probe_mode = code_seen(negating_parameter) && code_value_bool() ? -probe_points : probe_points;
+      const bool towers_set = !code_seen('T'),
+                 _1p_calibration      = probe_points == 1,
+                 _4p_calibration      = probe_points == 2,
+                 _4p_towers_points    = _4p_calibration && towers_set,
+                 _4p_opposite_points  = _4p_calibration && !towers_set,
+                 _7p_calibration      = probe_points >= 3,
+                 _7p_half_circle      = probe_points == 3,
+                 _7p_double_circle    = probe_points == 5,
+                 _7p_triple_circle    = probe_points == 6,
+                 _7p_quadruple_circle = probe_points == 7,
+                 _7p_multi_circle     = _7p_double_circle || _7p_triple_circle || _7p_quadruple_circle,
+                 _7p_intermed_points  = _7p_calibration && !_7p_half_circle;
+
+      if (!_1p_calibration) {  // test if the outer radius is reachable
+        const float circles = (_7p_quadruple_circle ? 1.5 :
+                               _7p_triple_circle    ? 1.0 :
+                               _7p_double_circle    ? 0.5 : 0),
+                    radius = (1 + circles * 0.1) * delta_calibration_radius;
+        for (uint8_t axis = 1; axis < 13; ++axis) {
+          if (!position_is_reachable_by_probe_xy(cos(RADIANS(180 + 30 * axis)) * radius, sin(RADIANS(180 + 30 * axis)) * radius)) {
+            SERIAL_PROTOCOLLNPGM("?(M665 B)ed radius is implausible.");
+            return;
+          }
+        }
+      }
 
       SERIAL_PROTOCOLLNPGM("G33 Auto Calibrate");
 
+      stepper.synchronize();
       #if HAS_LEVELING
-        set_bed_leveling_enabled(false);
+        reset_bed_level(); // After calibration bed-level data is no longer valid
       #endif
+      #if HOTENDS > 1
+        const uint8_t old_tool_index = active_extruder;
+        tool_change(0, 0, true);
+      #endif
+      setup_for_endstop_or_probe_move();
 
-      home_all_axes();
+      endstops.enable(true);
+      home_delta();
+      endstops.not_homing();
 
       const static char save_message[] PROGMEM = "Save with M500 and/or copy to Configuration.h";
       float test_precision,
             zero_std_dev = (verbose_level ? 999.0 : 0.0), // 0.0 in dry-run mode : forced end
+            zero_std_dev_old = zero_std_dev,
             e_old[XYZ] = {
               endstop_adj[A_AXIS],
               endstop_adj[B_AXIS],
@@ -5118,10 +5159,10 @@ void home_all_axes() { gcode_G28(); }
       SERIAL_PROTOCOLPGM("Checking... AC");
       if (verbose_level == 0) SERIAL_PROTOCOLPGM(" (DRY-RUN)");
       SERIAL_EOL;
-      LCD_MESSAGEPGM("Checking... AC");
+      LCD_MESSAGEPGM("Checking... AC"); // TODO: Make translatable string
 
       SERIAL_PROTOCOLPAIR(".Height:", DELTA_HEIGHT + home_offset[Z_AXIS]);
-      if (!do_height_only) {
+      if (!_1p_calibration) {
         SERIAL_PROTOCOLPGM("    Ex:");
         if (endstop_adj[A_AXIS] >= 0) SERIAL_CHAR('+');
         SERIAL_PROTOCOL_F(endstop_adj[A_AXIS], 2);
@@ -5134,7 +5175,7 @@ void home_all_axes() { gcode_G28(); }
         SERIAL_PROTOCOLPAIR("    Radius:", delta_radius);
       }
       SERIAL_EOL;
-      if (probe_mode > 2) { // negative disables tower angles
+      if (_7p_calibration && towers_set) {
         SERIAL_PROTOCOLPGM(".Tower angle :    Tx:");
         if (delta_tower_angle_trim[A_AXIS] >= 0) SERIAL_CHAR('+');
         SERIAL_PROTOCOL_F(delta_tower_angle_trim[A_AXIS], 2);
@@ -5151,79 +5192,75 @@ void home_all_axes() { gcode_G28(); }
 
       int8_t iterations = 0;
 
+      home_offset[Z_AXIS] -= probe_pt(0.0, 0.0 , true, 1); // 1st probe to set height
+      do_probe_raise(Z_CLEARANCE_BETWEEN_PROBES);
+
       do {
 
-        float z_at_pt[13] = { 0 },
-              S1 = 0.0,
-              S2 = 0.0;
+        float z_at_pt[13] = { 0.0 }, S1 = 0.0, S2 = 0.0;
         int16_t N = 0;
 
-        test_precision = zero_std_dev;
+        test_precision = zero_std_dev_old != 999.0 ? (zero_std_dev + zero_std_dev_old) / 2 : zero_std_dev;
+
         iterations++;
 
         // Probe the points
 
-        if (!do_all_positions && !do_circle_x3) { // probe the center
-          setup_for_endstop_or_probe_move();
+        if (!_7p_half_circle && !_7p_triple_circle) { // probe the center
           z_at_pt[0] += probe_pt(0.0, 0.0 , true, 1);
-          clean_up_after_endstop_or_probe_move();
         }
-        if (probe_center_plus_3) { // probe extra center points
-          for (int8_t axis = probe_center_plus_6 ? 11 : 9; axis > 0; axis -= probe_center_plus_6 ? 2 : 4) {
-            setup_for_endstop_or_probe_move();
-            z_at_pt[0] += probe_pt(
-              cos(RADIANS(180 + 30 * axis)) * (0.1 * delta_calibration_radius),
-              sin(RADIANS(180 + 30 * axis)) * (0.1 * delta_calibration_radius), true, 1);
-            clean_up_after_endstop_or_probe_move();
+        if (_7p_calibration) { // probe extra center points
+          for (int8_t axis = _7p_multi_circle ? 11 : 9; axis > 0; axis -= _7p_multi_circle ? 2 : 4) {
+            const float a = RADIANS(180 + 30 * axis), r = delta_calibration_radius * 0.1;
+            z_at_pt[0] += probe_pt(cos(a) * r, sin(a) * r, true, 1); // TODO: Needs error handling
           }
-          z_at_pt[0] /= float(do_circle_x2 ? 7 : probe_points);
+          z_at_pt[0] /= float(_7p_double_circle ? 7 : probe_points);
         }
-        if (!do_height_only) {  // probe the radius
+        if (!_1p_calibration) {  // probe the radius
           bool zig_zag = true;
-          for (uint8_t axis = (probe_mode == -2 ? 3 : 1); axis < 13;
-                       axis += (do_center_and_towers ? 4 : do_all_positions ? 2 : 1)) {
-            float offset_circles = (do_circle_x4 ? (zig_zag ? 1.5 : 1.0) :
-                                    do_circle_x3 ? (zig_zag ? 1.0 : 0.5) :
-                                    do_circle_x2 ? (zig_zag ? 0.5 : 0.0) : 0);
+          const uint8_t start = _4p_opposite_points ? 3 : 1,
+                         step = _4p_calibration ? 4 : _7p_half_circle ? 2 : 1;
+          for (uint8_t axis = start; axis < 13; axis += step) {
+            const float offset_circles = _7p_quadruple_circle ? (zig_zag ? 1.5 : 1.0) :
+                                         _7p_triple_circle    ? (zig_zag ? 1.0 : 0.5) :
+                                         _7p_double_circle    ? (zig_zag ? 0.5 : 0.0) : 0;
             for (float circles = -offset_circles ; circles <= offset_circles; circles++) {
-              setup_for_endstop_or_probe_move();
-              z_at_pt[axis] += probe_pt(
-                cos(RADIANS(180 + 30 * axis)) * delta_calibration_radius *
-                (1 + circles * 0.1 * (zig_zag ? 1 : -1)),
-                sin(RADIANS(180 + 30 * axis)) * delta_calibration_radius *
-                (1 + circles * 0.1 * (zig_zag ? 1 : -1)), true, 1);
-              clean_up_after_endstop_or_probe_move();
+              const float a = RADIANS(180 + 30 * axis),
+                          r = delta_calibration_radius * (1 + circles * (zig_zag ? 0.1 : -0.1));
+              z_at_pt[axis] += probe_pt(cos(a) * r, sin(a) * r, true, 1); // TODO: Needs error handling
             }
             zig_zag = !zig_zag;
             z_at_pt[axis] /= (2 * offset_circles + 1);
           }
         }
-        if (point_averaging) // average intermediates to tower and opposites
+        if (_7p_intermed_points) // average intermediates to tower and opposites
           for (uint8_t axis = 1; axis <= 11; axis += 2)
             z_at_pt[axis] = (z_at_pt[axis] + (z_at_pt[axis + 1] + z_at_pt[(axis + 10) % 12 + 1]) / 2.0) / 2.0;
 
         S1 += z_at_pt[0];
         S2 += sq(z_at_pt[0]);
         N++;
-        if (!do_height_only) // std dev from zero plane
-          for (uint8_t axis = (probe_mode == -2 ? 3 : 1); axis < 13; axis += (do_center_and_towers ? 4 : 2)) {
+        if (!_1p_calibration) // std dev from zero plane
+          for (uint8_t axis = (_4p_opposite_points ? 3 : 1); axis < 13; axis += (_4p_calibration ? 4 : 2)) {
             S1 += z_at_pt[axis];
             S2 += sq(z_at_pt[axis]);
             N++;
           }
+        zero_std_dev_old = zero_std_dev;
         zero_std_dev = round(sqrt(S2 / N) * 1000.0) / 1000.0 + 0.00001;
+
+        if (iterations == 1) home_offset[Z_AXIS] = zh_old; // reset height after 1st probe change
 
         // Solve matrices
 
-        if (zero_std_dev < test_precision) {
+        if (zero_std_dev < test_precision && zero_std_dev > calibration_precision) {
           COPY(e_old, endstop_adj);
           dr_old = delta_radius;
           zh_old = home_offset[Z_AXIS];
           alpha_old = delta_tower_angle_trim[A_AXIS];
           beta_old = delta_tower_angle_trim[B_AXIS];
 
-          float e_delta[XYZ] = { 0.0 }, r_delta = 0.0,
-                t_alpha = 0.0, t_beta = 0.0;
+          float e_delta[XYZ] = { 0.0 }, r_delta = 0.0, t_alpha = 0.0, t_beta = 0.0;
           const float r_diff = delta_radius - delta_calibration_radius,
                       h_factor = 1.00 + r_diff * 0.001,                          //1.02 for r_diff = 20mm
                       r_factor = -(1.75 + 0.005 * r_diff + 0.001 * sq(r_diff)),  //2.25 for r_diff = 20mm
@@ -5241,25 +5278,25 @@ void home_all_axes() { gcode_G28(); }
           #define Z0444(I) ZP(a_factor * 4.0 / 9.0, I)
           #define Z0888(I) ZP(a_factor * 8.0 / 9.0, I)
 
-          switch (probe_mode) {
-            case -1:
-              test_precision = 0.00;
+          switch (probe_points) {
             case 1:
+              test_precision = 0.00;
               LOOP_XYZ(i) e_delta[i] = Z1000(0);
               break;
 
             case 2:
-              e_delta[X_AXIS] = Z1050(0) + Z0700(1) - Z0350(5) - Z0350(9);
-              e_delta[Y_AXIS] = Z1050(0) - Z0350(1) + Z0700(5) - Z0350(9);
-              e_delta[Z_AXIS] = Z1050(0) - Z0350(1) - Z0350(5) + Z0700(9);
-              r_delta         = Z2250(0) - Z0750(1) - Z0750(5) - Z0750(9);
-              break;
-
-            case -2:
-              e_delta[X_AXIS] = Z1050(0) - Z0700(7) + Z0350(11) + Z0350(3);
-              e_delta[Y_AXIS] = Z1050(0) + Z0350(7) - Z0700(11) + Z0350(3);
-              e_delta[Z_AXIS] = Z1050(0) + Z0350(7) + Z0350(11) - Z0700(3);
-              r_delta         = Z2250(0) - Z0750(7) - Z0750(11) - Z0750(3);
+              if (towers_set) {
+                e_delta[X_AXIS] = Z1050(0) + Z0700(1) - Z0350(5) - Z0350(9);
+                e_delta[Y_AXIS] = Z1050(0) - Z0350(1) + Z0700(5) - Z0350(9);
+                e_delta[Z_AXIS] = Z1050(0) - Z0350(1) - Z0350(5) + Z0700(9);
+                r_delta         = Z2250(0) - Z0750(1) - Z0750(5) - Z0750(9);
+              }
+              else {
+                e_delta[X_AXIS] = Z1050(0) - Z0700(7) + Z0350(11) + Z0350(3);
+                e_delta[Y_AXIS] = Z1050(0) + Z0350(7) - Z0700(11) + Z0350(3);
+                e_delta[Z_AXIS] = Z1050(0) + Z0350(7) + Z0350(11) - Z0700(3);
+                r_delta         = Z2250(0) - Z0750(7) - Z0750(11) - Z0750(3);
+              }
               break;
 
             default:
@@ -5268,9 +5305,9 @@ void home_all_axes() { gcode_G28(); }
               e_delta[Z_AXIS] = Z1050(0) - Z0175(1) - Z0175(5) + Z0350(9) + Z0175(7) + Z0175(11) - Z0350(3);
               r_delta         = Z2250(0) - Z0375(1) - Z0375(5) - Z0375(9) - Z0375(7) - Z0375(11) - Z0375(3);
 
-              if (probe_mode > 0) {  // negative disables tower angles
-                t_alpha = + Z0444(1) - Z0888(5) + Z0444(9) + Z0444(7) - Z0888(11) + Z0444(3);
-                t_beta  = - Z0888(1) + Z0444(5) + Z0444(9) - Z0888(7) + Z0444(11) + Z0444(3);
+              if (towers_set) {
+                t_alpha = Z0444(1) - Z0888(5) + Z0444(9) + Z0444(7) - Z0888(11) + Z0444(3);
+                t_beta  = Z0888(1) - Z0444(5) - Z0444(9) + Z0888(7) - Z0444(11) - Z0444(3);
               }
               break;
           }
@@ -5278,7 +5315,7 @@ void home_all_axes() { gcode_G28(); }
           LOOP_XYZ(axis) endstop_adj[axis] += e_delta[axis];
           delta_radius += r_delta;
           delta_tower_angle_trim[A_AXIS] += t_alpha;
-          delta_tower_angle_trim[B_AXIS] -= t_beta;
+          delta_tower_angle_trim[B_AXIS] += t_beta;
 
           // adjust delta_height and endstops by the max amount
           const float z_temp = MAX3(endstop_adj[A_AXIS], endstop_adj[B_AXIS], endstop_adj[C_AXIS]);
@@ -5287,7 +5324,7 @@ void home_all_axes() { gcode_G28(); }
 
           recalc_delta_settings(delta_radius, delta_diagonal_rod);
         }
-        else {   // step one back
+        else if(zero_std_dev >= test_precision) {   // step one back
           COPY(endstop_adj, e_old);
           delta_radius = dr_old;
           home_offset[Z_AXIS] = zh_old;
@@ -5303,7 +5340,7 @@ void home_all_axes() { gcode_G28(); }
           SERIAL_PROTOCOLPGM(".      c:");
           if (z_at_pt[0] > 0) SERIAL_CHAR('+');
           SERIAL_PROTOCOL_F(z_at_pt[0], 2);
-          if (probe_mode == 2 || probe_center_plus_3) {
+          if (_4p_towers_points || _7p_calibration) {
             SERIAL_PROTOCOLPGM("     x:");
             if (z_at_pt[1] >= 0) SERIAL_CHAR('+');
             SERIAL_PROTOCOL_F(z_at_pt[1], 2);
@@ -5314,9 +5351,9 @@ void home_all_axes() { gcode_G28(); }
             if (z_at_pt[9] >= 0) SERIAL_CHAR('+');
             SERIAL_PROTOCOL_F(z_at_pt[9], 2);
           }
-          if (probe_mode != -2) SERIAL_EOL;
-          if (probe_mode == -2 || probe_center_plus_3) {
-            if (probe_center_plus_3) {
+          if (!_4p_opposite_points) SERIAL_EOL;
+          if ((_4p_opposite_points) || _7p_calibration) {
+            if (_7p_calibration) {
               SERIAL_CHAR('.');
               SERIAL_PROTOCOL_SP(13);
             }
@@ -5333,12 +5370,17 @@ void home_all_axes() { gcode_G28(); }
           }
         }
         if (test_precision != 0.0) {                                 // !forced end
-          if (zero_std_dev >= test_precision) {                      // end iterations
+          if (zero_std_dev >= test_precision || zero_std_dev <= calibration_precision) {  // end iterations
             SERIAL_PROTOCOLPGM("Calibration OK");
             SERIAL_PROTOCOL_SP(36);
-            SERIAL_PROTOCOLPGM("rolling back.");
+            if (zero_std_dev >= test_precision)
+              SERIAL_PROTOCOLPGM("rolling back.");
+            else {
+              SERIAL_PROTOCOLPGM("std dev:");
+              SERIAL_PROTOCOL_F(zero_std_dev, 3);
+            }
             SERIAL_EOL;
-            LCD_MESSAGEPGM("Calibration OK");
+            LCD_MESSAGEPGM("Calibration OK"); // TODO: Make translatable string
           }
           else {                                                     // !end iterations
             char mess[15] = "No convergence";
@@ -5352,7 +5394,7 @@ void home_all_axes() { gcode_G28(); }
             lcd_setstatus(mess);
           }
           SERIAL_PROTOCOLPAIR(".Height:", DELTA_HEIGHT + home_offset[Z_AXIS]);
-          if (!do_height_only) {
+          if (!_1p_calibration) {
             SERIAL_PROTOCOLPGM("    Ex:");
             if (endstop_adj[A_AXIS] >= 0) SERIAL_CHAR('+');
             SERIAL_PROTOCOL_F(endstop_adj[A_AXIS], 2);
@@ -5365,7 +5407,7 @@ void home_all_axes() { gcode_G28(); }
             SERIAL_PROTOCOLPAIR("    Radius:", delta_radius);
           }
           SERIAL_EOL;
-          if (probe_mode > 2) { // negative disables tower angles
+          if (_7p_calibration && towers_set) {
             SERIAL_PROTOCOLPGM(".Tower angle :    Tx:");
             if (delta_tower_angle_trim[A_AXIS] >= 0) SERIAL_CHAR('+');
             SERIAL_PROTOCOL_F(delta_tower_angle_trim[A_AXIS], 2);
@@ -5375,7 +5417,7 @@ void home_all_axes() { gcode_G28(); }
             SERIAL_PROTOCOLPGM("  Tz:+0.00");
             SERIAL_EOL;
           }
-          if (zero_std_dev >= test_precision)
+          if (zero_std_dev >= test_precision || zero_std_dev <= calibration_precision)
             serialprintPGM(save_message);
             SERIAL_EOL;
         }
@@ -5389,7 +5431,7 @@ void home_all_axes() { gcode_G28(); }
           }
           else {
             SERIAL_PROTOCOLLNPGM("Calibration OK");
-            LCD_MESSAGEPGM("Calibration OK");
+            LCD_MESSAGEPGM("Calibration OK"); // TODO: Make translatable string
             SERIAL_PROTOCOLPAIR(".Height:", DELTA_HEIGHT + home_offset[Z_AXIS]);
             SERIAL_EOL;
             serialprintPGM(save_message);
@@ -5397,12 +5439,20 @@ void home_all_axes() { gcode_G28(); }
           }
         }
 
-        stepper.synchronize();
+        endstops.enable(true);
+        home_delta();
+        endstops.not_homing();
 
-        home_all_axes();
+      }
+      while (zero_std_dev < test_precision && zero_std_dev > calibration_precision && iterations < 31);
 
-      } while (zero_std_dev < test_precision && iterations < 31);
-
+      #if ENABLED(DELTA_HOME_TO_SAFE_ZONE)
+        do_blocking_move_to_z(delta_clip_start_height);
+      #endif
+      clean_up_after_endstop_or_probe_move();
+      #if HOTENDS > 1
+        tool_change(old_tool_index, 0, true);
+      #endif
       #if ENABLED(Z_PROBE_SLED)
         RETRACT_PROBE();
       #endif
@@ -5411,7 +5461,6 @@ void home_all_axes() { gcode_G28(); }
   #endif // DELTA_AUTO_CALIBRATION
 
 #endif // HAS_BED_PROBE
-
 
 #if ENABLED(G38_PROBE_TARGET)
 
@@ -5501,6 +5550,45 @@ void home_all_axes() { gcode_G28(); }
   }
 
 #endif // G38_PROBE_TARGET
+
+#if ENABLED(AUTO_BED_LEVELING_UBL)
+
+  /**
+   * G42: Move X & Y axes to mesh coordinates (I & J)
+   */
+  inline void gcode_G42(
+    #if IS_SCARA
+      bool fast_move=false
+    #endif
+  ) {
+    if (IsRunning()) {
+      const bool hasI = code_seen('I');
+      const int8_t ix = code_has_value() ? code_value_int() : 0;
+      const bool hasJ = code_seen('J');
+      const int8_t iy = code_has_value() ? code_value_int() : 0;
+
+      if ((hasI && !WITHIN(ix, 0, GRID_MAX_POINTS_X - 1)) || (hasJ && !WITHIN(iy, 0, GRID_MAX_POINTS_Y - 1))) {
+        SERIAL_ECHOLNPGM(MSG_ERR_MESH_XY);
+        return;
+      }
+
+      destination[X_AXIS] = hasI ? ubl.mesh_index_to_xpos(ix) : current_position[X_AXIS];
+      destination[Y_AXIS] = hasJ ? ubl.mesh_index_to_ypos(iy) : current_position[Y_AXIS];
+      destination[Z_AXIS] = current_position[Z_AXIS]; //todo: perhaps add Z-move support?
+      destination[E_AXIS] = current_position[E_AXIS];
+
+      if (code_seen('F') && code_value_linear_units() > 0.0)
+        feedrate_mm_s = MMM_TO_MMS(code_value_linear_units());
+
+      #if IS_SCARA
+        fast_move ? prepare_uninterpolated_move_to_destination() : prepare_move_to_destination();
+      #else
+        prepare_move_to_destination();
+      #endif
+    }
+  }
+
+#endif // AUTO_BED_LEVELING_UBL
 
 /**
  * G92: Set current position to given X Y Z E
@@ -5609,6 +5697,121 @@ inline void gcode_G92() {
 
 #endif // HAS_RESUME_CONTINUE
 
+#if ENABLED(SPINDLE_LASER_ENABLE)
+  /**
+   * M3: Spindle Clockwise
+   * M4: Spindle Counter-clockwise
+   *
+   *  S0 turns off spindle.
+   *
+   *  If no speed PWM output is defined then M3/M4 just turns it on.
+   *
+   *  At least 12.8KHz (50Hz * 256) is needed for spindle PWM.
+   *  Hardware PWM is required. ISRs are too slow.
+   *
+   * NOTE: WGM for timers 3, 4, and 5 must be either Mode 1 or Mode 5.
+   *       No other settings give a PWM signal that goes from 0 to 5 volts.
+   *
+   *       The system automatically sets WGM to Mode 1, so no special
+   *       initialization is needed.
+   *
+   *       WGM bits for timer 2 are automatically set by the system to
+   *       Mode 1. This produces an acceptable 0 to 5 volt signal.
+   *       No special initialization is needed.
+   *
+   * NOTE: A minimum PWM frequency of 50 Hz is needed. All prescaler
+   *       factors for timers 2, 3, 4, and 5 are acceptable.
+   *
+   *  SPINDLE_LASER_ENABLE_PIN needs an external pullup or it may power on
+   *  the spindle/laser during power-up or when connecting to the host
+   *  (usually goes through a reset which sets all I/O pins to tri-state)
+   *
+   *  PWM duty cycle goes from 0 (off) to 255 (always on).
+   */
+
+  // Wait for spindle to come up to speed
+  inline void delay_for_power_up() {
+    refresh_cmd_timeout();
+    while (PENDING(millis(), SPINDLE_LASER_POWERUP_DELAY + previous_cmd_ms)) idle();
+  }
+
+  // Wait for spindle to stop turning
+  inline void delay_for_power_down() {
+    refresh_cmd_timeout();
+    while (PENDING(millis(), SPINDLE_LASER_POWERDOWN_DELAY + previous_cmd_ms + 1)) idle();
+  }
+
+  /**
+   * ocr_val_mode() is used for debugging and to get the points needed to compute the RPM vs ocr_val line
+   *
+   * it accepts inputs of 0-255
+   */
+
+  inline void ocr_val_mode() {
+    uint8_t spindle_laser_power = code_value_byte();
+    WRITE(SPINDLE_LASER_ENABLE_PIN, SPINDLE_LASER_ENABLE_INVERT); // turn spindle on (active low)
+    if (SPINDLE_LASER_PWM_INVERT) spindle_laser_power = 255 - spindle_laser_power;
+    analogWrite(SPINDLE_LASER_PWM_PIN, spindle_laser_power);
+  }
+
+  inline void gcode_M3_M4(bool is_M3) {
+
+    stepper.synchronize();   // wait until previous movement commands (G0/G0/G2/G3) have completed before playing with the spindle
+    #if SPINDLE_DIR_CHANGE
+      const bool rotation_dir = (is_M3 && !SPINDLE_INVERT_DIR || !is_M3 && SPINDLE_INVERT_DIR) ? HIGH : LOW;
+      if (SPINDLE_STOP_ON_DIR_CHANGE \
+         && READ(SPINDLE_LASER_ENABLE_PIN) == SPINDLE_LASER_ENABLE_INVERT \
+         && READ(SPINDLE_DIR_PIN) != rotation_dir
+      ) {
+        WRITE(SPINDLE_LASER_ENABLE_PIN, !SPINDLE_LASER_ENABLE_INVERT);  // turn spindle off
+        delay_for_power_down();
+      }
+      digitalWrite(SPINDLE_DIR_PIN, rotation_dir);
+    #endif
+
+    /**
+     * Our final value for ocr_val is an unsigned 8 bit value between 0 and 255 which usually means uint8_t.
+     * Went to uint16_t because some of the uint8_t calculations would sometimes give 1000 0000 rather than 1111 1111.
+     * Then needed to AND the uint16_t result with 0x00FF to make sure we only wrote the byte of interest.
+     */
+    #if ENABLED(SPINDLE_LASER_PWM)
+      if (code_seen('O')) ocr_val_mode();
+      else {
+        const float spindle_laser_power = code_seen('S') ? code_value_float() : 0;
+        if (spindle_laser_power == 0) {
+          WRITE(SPINDLE_LASER_ENABLE_PIN, !SPINDLE_LASER_ENABLE_INVERT);                                    // turn spindle off (active low)
+          delay_for_power_down();
+        }
+        else {
+          int16_t ocr_val = (spindle_laser_power - (SPEED_POWER_INTERCEPT)) * (1.0 / (SPEED_POWER_SLOPE));  // convert RPM to PWM duty cycle
+          NOMORE(ocr_val, 255);                                                                             // limit to max the Atmel PWM will support
+          if (spindle_laser_power <= SPEED_POWER_MIN)
+            ocr_val = (SPEED_POWER_MIN - (SPEED_POWER_INTERCEPT)) * (1.0 / (SPEED_POWER_SLOPE));            // minimum setting
+          if (spindle_laser_power >= SPEED_POWER_MAX)
+            ocr_val = (SPEED_POWER_MAX - (SPEED_POWER_INTERCEPT)) * (1.0 / (SPEED_POWER_SLOPE));            // limit to max RPM
+          if (SPINDLE_LASER_PWM_INVERT) ocr_val = 255 - ocr_val;
+          WRITE(SPINDLE_LASER_ENABLE_PIN, SPINDLE_LASER_ENABLE_INVERT);                                     // turn spindle on (active low)
+          analogWrite(SPINDLE_LASER_PWM_PIN, ocr_val & 0xFF);                                               // only write low byte
+          delay_for_power_up();
+        }
+      }
+    #else
+      WRITE(SPINDLE_LASER_ENABLE_PIN, SPINDLE_LASER_ENABLE_INVERT); // turn spindle on (active low) if spindle speed option not enabled
+      delay_for_power_up();
+    #endif
+  }
+
+ /**
+  * M5 turn off spindle
+  */
+  inline void gcode_M5() {
+    stepper.synchronize();
+    WRITE(SPINDLE_LASER_ENABLE_PIN, !SPINDLE_LASER_ENABLE_INVERT);
+    delay_for_power_down();
+  }
+
+#endif // SPINDLE_LASER_ENABLE
+
 /**
  * M17: Enable power on all stepper motors
  */
@@ -5624,6 +5827,7 @@ inline void gcode_M17() {
 #endif
 
 #if ENABLED(PARK_HEAD_ON_PAUSE)
+
   float resume_position[XYZE];
   bool move_away_flag = false;
 
@@ -6251,7 +6455,8 @@ inline void gcode_M42() {
     setup_for_endstop_or_probe_move();
 
     // Move to the first point, deploy, and probe
-    probe_pt(X_probe_location, Y_probe_location, stow_probe_after_each, verbose_level);
+    const float t = probe_pt(X_probe_location, Y_probe_location, stow_probe_after_each, verbose_level);
+    if (isnan(t)) return;
 
     randomSeed(millis());
 
@@ -6306,7 +6511,7 @@ inline void gcode_M42() {
           #else
             // If we have gone out too far, we can do a simple fix and scale the numbers
             // back in closer to the origin.
-            while ( ! position_is_reachable_by_probe_xy( X_current, Y_current )) {
+            while (!position_is_reachable_by_probe_xy(X_current, Y_current)) {
               X_current *= 0.8;
               Y_current *= 0.8;
               if (verbose_level > 3) {
@@ -6406,7 +6611,7 @@ inline void gcode_M42() {
 
 #endif // Z_MIN_PROBE_REPEATABILITY_TEST
 
-#if ENABLED(AUTO_BED_LEVELING_UBL) && ENABLED(UBL_G26_MESH_EDITING)
+#if ENABLED(AUTO_BED_LEVELING_UBL) && ENABLED(UBL_G26_MESH_VALIDATION)
 
   inline void gcode_M49() {
     ubl.g26_debug_flag ^= true;
@@ -6414,7 +6619,7 @@ inline void gcode_M42() {
     serialprintPGM(ubl.g26_debug_flag ? PSTR("on.") : PSTR("off."));
   }
 
-#endif // AUTO_BED_LEVELING_UBL && UBL_G26_MESH_EDITING
+#endif // AUTO_BED_LEVELING_UBL && UBL_G26_MESH_VALIDATION
 
 /**
  * M75: Start print timer
@@ -6477,7 +6682,8 @@ inline void gcode_M104() {
       }
     #endif
 
-    if (code_value_temp_abs() > thermalManager.degHotend(target_extruder)) lcd_status_printf_P(0, PSTR("E%i %s"), target_extruder + 1, MSG_HEATING);
+    if (code_value_temp_abs() > thermalManager.degHotend(target_extruder))
+      lcd_status_printf_P(0, PSTR("E%i %s"), target_extruder + 1, MSG_HEATING);
   }
 
   #if ENABLED(AUTOTEMP)
@@ -7760,7 +7966,7 @@ inline void gcode_M211() {
    *   T<tool>
    *   X<xoffset>
    *   Y<yoffset>
-   *   Z<zoffset> - Available with DUAL_X_CARRIAGE and SWITCHING_EXTRUDER
+   *   Z<zoffset> - Available with DUAL_X_CARRIAGE and SWITCHING_NOZZLE
    */
   inline void gcode_M218() {
     if (get_target_extruder_from_command(218) || target_extruder == 0) return;
@@ -7768,7 +7974,7 @@ inline void gcode_M211() {
     if (code_seen('X')) hotend_offset[X_AXIS][target_extruder] = code_value_linear_units();
     if (code_seen('Y')) hotend_offset[Y_AXIS][target_extruder] = code_value_linear_units();
 
-    #if ENABLED(DUAL_X_CARRIAGE) || ENABLED(SWITCHING_EXTRUDER)
+    #if ENABLED(DUAL_X_CARRIAGE) || ENABLED(SWITCHING_NOZZLE)
       if (code_seen('Z')) hotend_offset[Z_AXIS][target_extruder] = code_value_linear_units();
     #endif
 
@@ -7779,7 +7985,7 @@ inline void gcode_M211() {
       SERIAL_ECHO(hotend_offset[X_AXIS][e]);
       SERIAL_CHAR(',');
       SERIAL_ECHO(hotend_offset[Y_AXIS][e]);
-      #if ENABLED(DUAL_X_CARRIAGE) || ENABLED(SWITCHING_EXTRUDER)
+      #if ENABLED(DUAL_X_CARRIAGE) || ENABLED(SWITCHING_NOZZLE)
         SERIAL_CHAR(',');
         SERIAL_ECHO(hotend_offset[Z_AXIS][e]);
       #endif
@@ -8083,7 +8289,7 @@ inline void gcode_M226() {
       // Report current state
       SERIAL_ECHO_START;
       SERIAL_ECHOPAIR("Cold extrudes are ", (thermalManager.allow_cold_extrude ? "en" : "dis"));
-      SERIAL_ECHOPAIR("abled (min temp ", int(thermalManager.extrude_min_temp + 0.5));
+      SERIAL_ECHOPAIR("abled (min temp ", thermalManager.extrude_min_temp);
       SERIAL_ECHOLNPGM("C)");
     }
   }
@@ -8339,15 +8545,22 @@ void quickstop_stepper() {
     #if ENABLED(AUTO_BED_LEVELING_UBL)
       // L to load a mesh from the EEPROM
       if (code_seen('L')) {
-        const int8_t storage_slot = code_has_value() ? code_value_int() : ubl.state.eeprom_storage_slot;
-        const int16_t j = (UBL_LAST_EEPROM_INDEX - ubl.eeprom_start) / sizeof(ubl.z_values);
-        if (!WITHIN(storage_slot, 0, j - 1) || ubl.eeprom_start <= 0) {
-          SERIAL_PROTOCOLLNPGM("?EEPROM storage not available for use.\n");
+        const int8_t storage_slot = code_has_value() ? code_value_int() : ubl.state.storage_slot;
+        const int16_t a = settings.calc_num_meshes();
+
+        if (!a) {
+          SERIAL_PROTOCOLLNPGM("?EEPROM storage not available.");
           return;
         }
 
-        ubl.load_mesh(storage_slot);
-        ubl.state.eeprom_storage_slot = storage_slot;
+        if (!WITHIN(storage_slot, 0, a - 1)) {
+          SERIAL_PROTOCOLLNPGM("?Invalid storage slot.");
+          SERIAL_PROTOCOLLNPAIR("?Use 0 to ", a - 1);
+          return;
+        }
+
+        settings.load_mesh(storage_slot);
+        ubl.state.storage_slot = storage_slot;
       }
     #endif // AUTO_BED_LEVELING_UBL
 
@@ -8375,7 +8588,7 @@ void quickstop_stepper() {
       if (code_seen('L') || code_seen('V')) {
         ubl.display_map(0);  // Currently only supports one map type
         SERIAL_ECHOLNPAIR("UBL_MESH_VALID = ", UBL_MESH_VALID);
-        SERIAL_ECHOLNPAIR("eeprom_storage_slot = ", ubl.state.eeprom_storage_slot);
+        SERIAL_ECHOLNPAIR("ubl.state.storage_slot = ", ubl.state.storage_slot);
       }
     #endif
 
@@ -8422,12 +8635,12 @@ void quickstop_stepper() {
    */
   inline void gcode_M421() {
     const bool hasX = code_seen('X'), hasI = code_seen('I');
-    const int8_t ix = hasI ? code_value_byte() : hasX ? mbl.probe_index_x(RAW_X_POSITION(code_value_linear_units())) : -1;
+    const int8_t ix = hasI ? code_value_int() : hasX ? mbl.probe_index_x(RAW_X_POSITION(code_value_linear_units())) : -1;
     const bool hasY = code_seen('Y'), hasJ = code_seen('J');
-    const int8_t iy = hasJ ? code_value_byte() : hasY ? mbl.probe_index_y(RAW_Y_POSITION(code_value_linear_units())) : -1;
-    const bool hasZ = code_seen('Z'), hasQ = code_seen('Q');
+    const int8_t iy = hasJ ? code_value_int() : hasY ? mbl.probe_index_y(RAW_Y_POSITION(code_value_linear_units())) : -1;
+    const bool hasZ = code_seen('Z'), hasQ = !hasZ && code_seen('Q');
 
-    if (int(hasI && hasJ) + int(hasX && hasY) != 1 || hasZ == hasQ) {
+    if (int(hasI && hasJ) + int(hasX && hasY) != 1 || !(hasZ || hasQ)) {
       SERIAL_ERROR_START;
       SERIAL_ERRORLNPGM(MSG_ERR_M421_PARAMETERS);
     }
@@ -8450,12 +8663,12 @@ void quickstop_stepper() {
    */
   inline void gcode_M421() {
     const bool hasI = code_seen('I');
-    const int8_t ix = hasI ? code_value_byte() : -1;
+    const int8_t ix = hasI ? code_value_int() : -1;
     const bool hasJ = code_seen('J');
-    const int8_t iy = hasJ ? code_value_byte() : -1;
-    const bool hasZ = code_seen('Z'), hasQ = code_seen('Q');
+    const int8_t iy = hasJ ? code_value_int() : -1;
+    const bool hasZ = code_seen('Z'), hasQ = !hasZ && code_seen('Q');
 
-    if (!hasI || !hasJ || hasZ == hasQ) {
+    if (!hasI || !hasJ || !(hasZ || hasQ)) {
       SERIAL_ERROR_START;
       SERIAL_ERRORLNPGM(MSG_ERR_M421_PARAMETERS);
     }
@@ -8483,14 +8696,20 @@ void quickstop_stepper() {
    *   M421 C Q<offset>
    */
   inline void gcode_M421() {
-    const mesh_index_pair location = find_closest_mesh_point_of_type(REAL, current_position[X_AXIS], current_position[Y_AXIS], USE_NOZZLE_AS_REFERENCE, NULL, false);
-    const bool hasC = code_seen('C'), hasI = code_seen('I');
-    const int8_t ix = hasI ? code_value_byte() : hasC ? location.x_index : -1;
+    const bool hasC = code_seen('C');
+    const bool hasI = code_seen('I');
+    int8_t ix = hasI ? code_value_int() : -1;
     const bool hasJ = code_seen('J');
-    const int8_t iy = hasJ ? code_value_byte() : hasC ? location.y_index : -1;
-    const bool hasZ = code_seen('Z'), hasQ = code_seen('Q');
+    int8_t iy = hasJ ? code_value_int() : -1;
+    const bool hasZ = code_seen('Z'), hasQ = !hasZ && code_seen('Q');
 
-    if (int(hasC) + int(hasI && hasJ) != 1 || hasZ == hasQ) {
+    if (hasC) {
+      const mesh_index_pair location = ubl.find_closest_mesh_point_of_type(REAL, current_position[X_AXIS], current_position[Y_AXIS], USE_NOZZLE_AS_REFERENCE, NULL, false);
+      ix = location.x_index;
+      iy = location.y_index;
+    }
+
+    if (int(hasC) + int(hasI && hasJ) != 1 || !(hasZ || hasQ)) {
       SERIAL_ERROR_START;
       SERIAL_ERRORLNPGM(MSG_ERR_M421_PARAMETERS);
     }
@@ -8521,10 +8740,10 @@ void quickstop_stepper() {
     bool err = false;
     LOOP_XYZ(i) {
       if (axis_homed[i]) {
-        float base = (current_position[i] > (soft_endstop_min[i] + soft_endstop_max[i]) * 0.5) ? base_home_pos((AxisEnum)i) : 0,
-              diff = current_position[i] - LOGICAL_POSITION(base, i);
+        const float base = (current_position[i] > (soft_endstop_min[i] + soft_endstop_max[i]) * 0.5) ? base_home_pos((AxisEnum)i) : 0,
+                    diff = base - RAW_POSITION(current_position[i], i);
         if (WITHIN(diff, -20, 20)) {
-          set_home_offset((AxisEnum)i, home_offset[i] - diff);
+          set_home_offset((AxisEnum)i, diff);
         }
         else {
           SERIAL_ERROR_START;
@@ -9362,6 +9581,14 @@ inline void gcode_M999() {
   }
 #endif
 
+#if ENABLED(SWITCHING_NOZZLE)
+  inline void move_nozzle_servo(uint8_t e) {
+    const int angles[2] = SWITCHING_NOZZLE_SERVO_ANGLES;
+    MOVE_SERVO(SWITCHING_NOZZLE_SERVO_NR, angles[e]);
+    safe_delay(500);
+  }
+#endif
+
 inline void invalid_extruder_error(const uint8_t &e) {
   SERIAL_ECHO_START;
   SERIAL_CHAR('T');
@@ -9509,7 +9736,7 @@ void tool_change(const uint8_t tmp_extruder, const float fr_mm_s/*=0.0*/, bool n
           // No extra case for HAS_ABL in DUAL_X_CARRIAGE. Does that mean they don't work together?
         #else // !DUAL_X_CARRIAGE
 
-          #if ENABLED(SWITCHING_EXTRUDER)
+          #if ENABLED(SWITCHING_NOZZLE)
             // <0 if the new nozzle is higher, >0 if lower. A bigger raise when lower.
             const float z_diff = hotend_offset[Z_AXIS][active_extruder] - hotend_offset[Z_AXIS][tmp_extruder],
                         z_raise = 0.3 + (z_diff > 0.0 ? z_diff : 0.0);
@@ -9519,7 +9746,14 @@ void tool_change(const uint8_t tmp_extruder, const float fr_mm_s/*=0.0*/, bool n
             planner.buffer_line_kinematic(current_position, planner.max_feedrate_mm_s[Z_AXIS], active_extruder);
             stepper.synchronize();
 
-            move_extruder_servo(active_extruder);
+            move_nozzle_servo(active_extruder);
+          #endif
+
+          #if ENABLED(SWITCHING_EXTRUDER)
+            #if !(ENABLED(SWITCHING_NOZZLE) && (SWITCHING_EXTRUDER_SERVO_NR == SWITCHING_NOZZLE_SERVO_NR))
+              stepper.synchronize();
+              move_extruder_servo(active_extruder);
+            #endif
           #endif
 
           /**
@@ -9642,7 +9876,7 @@ void tool_change(const uint8_t tmp_extruder, const float fr_mm_s/*=0.0*/, bool n
           prepare_move_to_destination();
         }
 
-        #if ENABLED(SWITCHING_EXTRUDER)
+        #if ENABLED(SWITCHING_NOZZLE)
           // Move back down, if needed. (Including when the new tool is higher.)
           if (z_raise != z_diff) {
             destination[Z_AXIS] += z_diff;
@@ -9669,6 +9903,11 @@ void tool_change(const uint8_t tmp_extruder, const float fr_mm_s/*=0.0*/, bool n
 
       UNUSED(fr_mm_s);
       UNUSED(no_move);
+
+      #if ENABLED(SWITCHING_EXTRUDER)
+        stepper.synchronize();
+        move_extruder_servo(active_extruder);
+      #endif
 
     #endif // HOTENDS <= 1
 
@@ -9845,7 +10084,7 @@ void process_next_command() {
           break;
       #endif // INCH_MODE_SUPPORT
 
-      #if ENABLED(AUTO_BED_LEVELING_UBL) && ENABLED(UBL_G26_MESH_EDITING)
+      #if ENABLED(AUTO_BED_LEVELING_UBL) && ENABLED(UBL_G26_MESH_VALIDATION)
         case 26: // G26: Mesh Validation Pattern generation
           gcode_G26();
           break;
@@ -9858,7 +10097,7 @@ void process_next_command() {
       #endif // NOZZLE_PARK_FEATURE
 
       case 28: // G28: Home all axes, one at a time
-        gcode_G28();
+        gcode_G28(false);
         break;
 
       #if HAS_LEVELING
@@ -9913,6 +10152,17 @@ void process_next_command() {
       case 92: // G92
         gcode_G92();
         break;
+
+      #if ENABLED(AUTO_BED_LEVELING_UBL)
+        case 42:
+          #if IS_SCARA
+            gcode_G42(codenum == 0);
+          #else
+            gcode_G42();
+          #endif
+          break;
+      #endif
+
     }
     break;
 
@@ -9924,6 +10174,17 @@ void process_next_command() {
           break;
       #endif // ULTIPANEL
 
+      #if ENABLED(SPINDLE_LASER_ENABLE)
+        case 3:
+          gcode_M3_M4(true);   // M3: turn spindle/laser on, set laser/spindle power/speed, set rotation direction CW
+          break;               // synchronizes with movement commands
+        case 4:
+          gcode_M3_M4(false);  // M4: turn spindle/laser on, set laser/spindle power/speed, set rotation direction CCW
+          break;               // synchronizes with movement commands
+        case 5:
+          gcode_M5();     // M5 - turn spindle/laser off
+          break;          // synchronizes with movement commands
+      #endif
       case 17: // M17: Enable all stepper motors
         gcode_M17();
         break;
@@ -9986,11 +10247,11 @@ void process_next_command() {
           break;
       #endif // Z_MIN_PROBE_REPEATABILITY_TEST
 
-      #if ENABLED(AUTO_BED_LEVELING_UBL) && ENABLED(UBL_G26_MESH_EDITING)
+      #if ENABLED(AUTO_BED_LEVELING_UBL) && ENABLED(UBL_G26_MESH_VALIDATION)
         case 49: // M49: Turn on or off G26 debug flag for verbose output
           gcode_M49();
           break;
-      #endif // AUTO_BED_LEVELING_UBL && UBL_G26_MESH_EDITING
+      #endif // AUTO_BED_LEVELING_UBL && UBL_G26_MESH_VALIDATION
 
       case 75: // M75: Start print timer
         gcode_M75(); break;
@@ -10416,7 +10677,7 @@ void process_next_command() {
           break;
       #endif // FILAMENT_CHANGE_FEATURE
 
-      #if ENABLED(DUAL_X_CARRIAGE)
+      #if ENABLED(DUAL_X_CARRIAGE) || ENABLED(DUAL_NOZZLE_DUPLICATION_MODE)
         case 605: // M605: Set Dual X Carriage movement mode
           gcode_M605();
           break;
@@ -11207,7 +11468,7 @@ void set_current_from_steppers_for_axis(const AxisEnum axis) {
     #if ENABLED(AUTO_BED_LEVELING_UBL)
       const float fr_scaled = MMS_SCALED(feedrate_mm_s);
       if (ubl.state.active) {
-        ubl_line_to_destination_cartesian(fr_scaled, active_extruder);
+        ubl.line_to_destination_cartesian(fr_scaled, active_extruder);
         return true;
       }
       else
@@ -11352,14 +11613,14 @@ void prepare_move_to_destination() {
   if (
     #if IS_KINEMATIC
       #if UBL_DELTA
-        ubl_prepare_linear_move_to(destination, feedrate_mm_s)
+        ubl.prepare_linear_move_to(destination, feedrate_mm_s)
       #else
         prepare_kinematic_move_to(destination)
       #endif
     #elif ENABLED(DUAL_X_CARRIAGE)
       prepare_move_to_destination_dualx()
     #elif UBL_DELTA // will work for CARTESIAN too (smaller segments follow mesh more closely)
-      ubl_prepare_linear_move_to(destination, feedrate_mm_s)
+      ubl.prepare_linear_move_to(destination, feedrate_mm_s)
     #else
       prepare_move_to_destination_cartesian()
     #endif
@@ -11648,9 +11909,8 @@ void prepare_move_to_destination() {
       #if HAS_TEMP_BED
         max_temp = MAX3(max_temp, thermalManager.degTargetBed(), thermalManager.degBed());
       #endif
-      HOTEND_LOOP() {
+      HOTEND_LOOP()
         max_temp = MAX3(max_temp, thermalManager.degHotend(e), thermalManager.degTargetHotend(e));
-      }
       bool new_led = (max_temp > 55.0) ? true : (max_temp < 54.0) ? false : red_led;
       if (new_led != red_led) {
         red_led = new_led;
@@ -12238,6 +12498,17 @@ void setup() {
 
   #if HAS_CASE_LIGHT
     update_case_light();
+  #endif
+
+  #if ENABLED(SPINDLE_LASER_ENABLE)
+    OUT_WRITE(SPINDLE_LASER_ENABLE_PIN, !SPINDLE_LASER_ENABLE_INVERT);  // init spindle to off
+    #if SPINDLE_DIR_CHANGE
+      OUT_WRITE(SPINDLE_DIR_PIN, SPINDLE_INVERT_DIR ? 255 : 0);  // init rotation to clockwise (M3)
+    #endif
+    #if ENABLED(SPINDLE_LASER_PWM)
+      SET_OUTPUT(SPINDLE_LASER_PWM_PIN);
+      analogWrite(SPINDLE_LASER_PWM_PIN, SPINDLE_LASER_PWM_INVERT ? 255 : 0);  // set to lowest speed
+    #endif
   #endif
 
   #if HAS_BED_PROBE
