@@ -218,7 +218,7 @@
 #define E3_AUTO_FAN_PIN -1
 #define E4_AUTO_FAN_PIN -1
 #define EXTRUDER_AUTO_FAN_TEMPERATURE 75
-#define EXTRUDER_AUTO_FAN_SPEED   200  // == full speed
+#define EXTRUDER_AUTO_FAN_SPEED   108  // == 75% (12v fan on 24v supply)
 
 // Define a pin to turn case light on/off
 //#define CASE_LIGHT_PIN 4
