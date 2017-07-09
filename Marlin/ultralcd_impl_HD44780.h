@@ -31,6 +31,24 @@
 #include "utility.h"
 #include "duration_t.h"
 
+#if ENABLED(AUTO_BED_LEVELING_UBL)
+  #include "ubl.h"
+
+  #if ENABLED(ULTIPANEL)
+    #define ULTRA_X_PIXELS_PER_CHAR    5
+    #define ULTRA_Y_PIXELS_PER_CHAR    8
+    #define ULTRA_COLUMNS_FOR_MESH_MAP 7
+    #define ULTRA_ROWS_FOR_MESH_MAP    4
+
+    #define N_USER_CHARS    8
+
+    #define TOP_LEFT      0x01
+    #define TOP_RIGHT     0x02
+    #define LOWER_LEFT    0x04
+    #define LOWER_RIGHT   0x08
+  #endif
+#endif
+
 extern volatile uint8_t buttons;  //an extended version of the last checked buttons in a bit array.
 
 ////////////////////////////////////
@@ -337,17 +355,17 @@ static void lcd_set_custom_characters(
       if (info_screen_charset != char_mode) {
         char_mode = info_screen_charset;
         if (info_screen_charset) { // Progress bar characters for info screen
-          for (int i = 3; i--;) createChar_P(LCD_STR_PROGRESS[i], progress[i]);
+          for (int16_t i = 3; i--;) createChar_P(LCD_STR_PROGRESS[i], progress[i]);
         }
         else { // Custom characters for submenus
           createChar_P(LCD_UPLEVEL_CHAR, uplevel);
-          createChar_P(LCD_REFRESH_CHAR, refresh);
+          createChar_P(LCD_STR_REFRESH[0], refresh);
           createChar_P(LCD_STR_FOLDER[0], folder);
         }
       }
     #else
       createChar_P(LCD_UPLEVEL_CHAR, uplevel);
-      createChar_P(LCD_REFRESH_CHAR, refresh);
+      createChar_P(LCD_STR_REFRESH[0], refresh);
       createChar_P(LCD_STR_FOLDER[0], folder);
     #endif
 
@@ -414,17 +432,17 @@ void lcd_printPGM_utf(const char *str, uint8_t n=LCD_WIDTH) {
 
 #if ENABLED(SHOW_BOOTSCREEN)
 
-  void lcd_erase_line(const int line) {
+  void lcd_erase_line(const int16_t line) {
     lcd.setCursor(0, line);
     for (uint8_t i = LCD_WIDTH + 1; --i;)
-      lcd.print(' ');
+      lcd.write(' ');
   }
 
   // Scroll the PSTR 'text' in a 'len' wide field for 'time' milliseconds at position col,line
-  void lcd_scroll(const int col, const int line, const char* const text, const int len, const int time) {
+  void lcd_scroll(const int16_t col, const int16_t line, const char* const text, const int16_t len, const int16_t time) {
     char tmp[LCD_WIDTH + 1] = {0};
-    int n = max(lcd_strlen_P(text) - len, 0);
-    for (int i = 0; i <= n; i++) {
+    int16_t n = max(lcd_strlen_P(text) - len, 0);
+    for (int16_t i = 0; i <= n; i++) {
       strncpy_P(tmp, text + i, min(len, LCD_WIDTH));
       lcd.setCursor(col, line);
       lcd_print(tmp);
@@ -433,13 +451,13 @@ void lcd_printPGM_utf(const char *str, uint8_t n=LCD_WIDTH) {
   }
 
   static void logo_lines(const char* const extra) {
-    int indent = (LCD_WIDTH - 8 - lcd_strlen_P(extra)) / 2;
-    lcd.setCursor(indent, 0); lcd.print('\x00'); lcd_printPGM(PSTR( "------" ));  lcd.print('\x01');
+    int16_t indent = (LCD_WIDTH - 8 - lcd_strlen_P(extra)) / 2;
+    lcd.setCursor(indent, 0); lcd.print('\x00'); lcd_printPGM(PSTR( "------" ));  lcd.write('\x01');
     lcd.setCursor(indent, 1);                    lcd_printPGM(PSTR("|Marlin|"));  lcd_printPGM(extra);
-    lcd.setCursor(indent, 2); lcd.print('\x02'); lcd_printPGM(PSTR( "------" ));  lcd.print('\x03');
+    lcd.setCursor(indent, 2); lcd.write('\x02'); lcd_printPGM(PSTR( "------" ));  lcd.write('\x03');
   }
 
-  void bootscreen() {
+  void lcd_bootscreen() {
     const static PROGMEM byte corner[4][8] = { {
       B00000,
       B00000,
@@ -577,11 +595,11 @@ FORCE_INLINE void _draw_axis_label(const AxisEnum axis, const char* const pstr, 
     lcd_printPGM(pstr);
   else {
     if (!axis_homed[axis])
-      lcd.print('?');
+      lcd.write('?');
     else {
       #if DISABLED(DISABLE_REDUCED_ACCURACY_WARNING)
         if (!axis_known_position[axis])
-          lcd.print(' ');
+          lcd.write(' ');
         else
       #endif
       lcd_printPGM(pstr);
@@ -598,7 +616,7 @@ FORCE_INLINE void _draw_heater_status(const int8_t heater, const char prefix, co
   if (prefix >= 0) lcd.print(prefix);
 
   lcd.print(itostr3(t1 + 0.5));
-  lcd.print('/');
+  lcd.write('/');
 
   #if HEATER_IDLE_HANDLER
     const bool is_idle = (!isBed ? thermalManager.is_heater_idle(heater) :
@@ -610,9 +628,9 @@ FORCE_INLINE void _draw_heater_status(const int8_t heater, const char prefix, co
     );
 
     if (!blink && is_idle) {
-      lcd.print(' ');
-      if (t2 >= 10) lcd.print(' ');
-      if (t2 >= 100) lcd.print(' ');
+      lcd.write(' ');
+      if (t2 >= 10) lcd.write(' ');
+      if (t2 >= 100) lcd.write(' ');
     }
     else
   #endif
@@ -620,15 +638,15 @@ FORCE_INLINE void _draw_heater_status(const int8_t heater, const char prefix, co
 
   if (prefix >= 0) {
     lcd.print((char)LCD_DEGREE_CHAR);
-    lcd.print(' ');
-    if (t2 < 10) lcd.print(' ');
+    lcd.write(' ');
+    if (t2 < 10) lcd.write(' ');
   }
 }
 
 #if ENABLED(LCD_PROGRESS_BAR)
 
   inline void lcd_draw_progress_bar(const uint8_t percent) {
-    const int tix = (int)(percent * (LCD_WIDTH) * 3) / 100,
+    const int16_t tix = (int16_t)(percent * (LCD_WIDTH) * 3) / 100,
               cel = tix / 3,
               rem = tix % 3;
     uint8_t i = LCD_WIDTH;
@@ -738,7 +756,7 @@ static void lcd_implementation_status_screen() {
           lcd.print(itostr3(card.percentDone()));
         else
           lcd_printPGM(PSTR("---"));
-          lcd.print('%');
+          lcd.write('%');
       #endif // SDSUPPORT
 
     #else // LCD_WIDTH >= 20
@@ -760,7 +778,7 @@ static void lcd_implementation_status_screen() {
         _draw_axis_label(X_AXIS, PSTR(MSG_X), blink);
         lcd.print(ftostr4sign(current_position[X_AXIS]));
 
-        lcd.print(' ');
+        lcd.write(' ');
 
         _draw_axis_label(Y_AXIS, PSTR(MSG_Y), blink);
         lcd.print(ftostr4sign(current_position[Y_AXIS]));
@@ -784,7 +802,7 @@ static void lcd_implementation_status_screen() {
     lcd.setCursor(0, 2);
     lcd.print((char)LCD_FEEDRATE_CHAR);
     lcd.print(itostr3(feedrate_percentage));
-    lcd.print('%');
+    lcd.write('%');
 
     #if LCD_WIDTH >= 20 && ENABLED(SDSUPPORT)
 
@@ -794,7 +812,7 @@ static void lcd_implementation_status_screen() {
         lcd.print(itostr3(card.percentDone()));
       else
         lcd_printPGM(PSTR("---"));
-      lcd.print('%');
+      lcd.write('%');
 
     #endif // LCD_WIDTH >= 20 && SDSUPPORT
 
@@ -833,7 +851,7 @@ static void lcd_implementation_status_screen() {
       lcd.print(ftostr12ns(filament_width_meas));
       lcd_printPGM(PSTR(" V"));
       lcd.print(itostr3(100.0 * volumetric_multiplier[FILAMENT_SENSOR_EXTRUDER_NUM]));
-      lcd.print('%');
+      lcd.write('%');
       return;
     }
 
@@ -854,10 +872,10 @@ static void lcd_implementation_status_screen() {
           lcd_print_utf(stat);                                  // The string leaves space
           chars -= slen - status_scroll_pos;                    // Amount of space left
         }
-        lcd.print('.');                                         // Always at 1+ spaces left, draw a dot
+        lcd.write('.');                                         // Always at 1+ spaces left, draw a dot
         if (--chars) {
           if (status_scroll_pos < slen + 1)                     // Draw a second dot if there's space
-            --chars, lcd.print('.');
+            --chars, lcd.write('.');
           if (chars) lcd_print_utf(lcd_status_message, chars);  // Print a second copy of the message
         }
       }
@@ -893,7 +911,7 @@ static void lcd_implementation_status_screen() {
     lcd.setCursor(0, row);
     if (center && !valstr) {
       int8_t pad = (LCD_WIDTH - lcd_strlen_P(pstr)) / 2;
-      while (--pad >= 0) { lcd.print(' '); n--; }
+      while (--pad >= 0) { lcd.write(' '); n--; }
     }
     while (n > 0 && (c = pgm_read_byte(pstr))) {
       n -= charset_mapper(c);
@@ -903,7 +921,7 @@ static void lcd_implementation_status_screen() {
       n -= charset_mapper(c);
       valstr++;
     }
-    while (n-- > 0) lcd.print(' ');
+    while (n-- > 0) lcd.write(' ');
   }
 
   static void lcd_implementation_drawmenu_generic(const bool sel, const uint8_t row, const char* pstr, const char pre_char, const char post_char) {
@@ -915,7 +933,7 @@ static void lcd_implementation_status_screen() {
       n -= charset_mapper(c);
       pstr++;
     }
-    while (n--) lcd.print(' ');
+    while (n--) lcd.write(' ');
     lcd.print(post_char);
   }
 
@@ -928,8 +946,8 @@ static void lcd_implementation_status_screen() {
       n -= charset_mapper(c);
       pstr++;
     }
-    lcd.print(':');
-    while (n--) lcd.print(' ');
+    lcd.write(':');
+    while (n--) lcd.write(' ');
     lcd_print(data);
   }
   static void lcd_implementation_drawmenu_setting_edit_generic_P(const bool sel, const uint8_t row, const char* pstr, const char pre_char, const char* const data) {
@@ -941,8 +959,8 @@ static void lcd_implementation_status_screen() {
       n -= charset_mapper(c);
       pstr++;
     }
-    lcd.print(':');
-    while (n--) lcd.print(' ');
+    lcd.write(':');
+    while (n--) lcd.write(' ');
     lcd_printPGM(data);
   }
 
@@ -958,7 +976,8 @@ static void lcd_implementation_status_screen() {
     } \
     typedef void _name##_void
 
-  DEFINE_LCD_IMPLEMENTATION_DRAWMENU_SETTING_EDIT_TYPE(int, int3, itostr3);
+  DEFINE_LCD_IMPLEMENTATION_DRAWMENU_SETTING_EDIT_TYPE(int16_t, int3, itostr3);
+  DEFINE_LCD_IMPLEMENTATION_DRAWMENU_SETTING_EDIT_TYPE(uint8_t, int8, i8tostr3);
   DEFINE_LCD_IMPLEMENTATION_DRAWMENU_SETTING_EDIT_TYPE(float, float3, ftostr3);
   DEFINE_LCD_IMPLEMENTATION_DRAWMENU_SETTING_EDIT_TYPE(float, float32, ftostr32);
   DEFINE_LCD_IMPLEMENTATION_DRAWMENU_SETTING_EDIT_TYPE(float, float43, ftostr43sign);
@@ -966,7 +985,7 @@ static void lcd_implementation_status_screen() {
   DEFINE_LCD_IMPLEMENTATION_DRAWMENU_SETTING_EDIT_TYPE(float, float51, ftostr51sign);
   DEFINE_LCD_IMPLEMENTATION_DRAWMENU_SETTING_EDIT_TYPE(float, float52, ftostr52sign);
   DEFINE_LCD_IMPLEMENTATION_DRAWMENU_SETTING_EDIT_TYPE(float, float62, ftostr62rj);
-  DEFINE_LCD_IMPLEMENTATION_DRAWMENU_SETTING_EDIT_TYPE(unsigned long, long5, ftostr5rj);
+  DEFINE_LCD_IMPLEMENTATION_DRAWMENU_SETTING_EDIT_TYPE(uint32_t, long5, ftostr5rj);
 
   #define lcd_implementation_drawmenu_setting_edit_bool(sel, row, pstr, pstr2, data) lcd_implementation_drawmenu_setting_edit_generic_P(sel, row, pstr, '>', (*(data))?PSTR(MSG_ON):PSTR(MSG_OFF))
   #define lcd_implementation_drawmenu_setting_edit_callback_bool(sel, row, pstr, pstr2, data, callback) lcd_implementation_drawmenu_setting_edit_generic_P(sel, row, pstr, '>', (*(data))?PSTR(MSG_ON):PSTR(MSG_OFF))
@@ -976,8 +995,10 @@ static void lcd_implementation_status_screen() {
     lcd.setCursor(1, 1);
     lcd_printPGM(pstr);
     if (value != NULL) {
-      lcd.print(':');
-      lcd.setCursor(LCD_WIDTH - lcd_strlen(value), 1);
+      lcd.write(':');
+      const uint8_t valrow = (lcd_strlen_P(pstr) + 1 + lcd_strlen(value) + 1) > (LCD_WIDTH - 2) ? 2 : 1;  // Value on the next row if it won't fit
+      lcd.setCursor((LCD_WIDTH - 1) - (lcd_strlen(value) + 1), valrow);                                   // Right-justified, padded by spaces
+      lcd.write(' ');                                                                                     // overwrite char if value gets shorter
       lcd_print(value);
     }
   }
@@ -998,7 +1019,7 @@ static void lcd_implementation_status_screen() {
         n -= charset_mapper(c);
         filename++;
       }
-      while (n--) lcd.print(' ');
+      while (n--) lcd.write(' ');
       lcd.print(post_char);
     }
 
@@ -1012,7 +1033,7 @@ static void lcd_implementation_status_screen() {
 
   #endif // SDSUPPORT
 
-  #define lcd_implementation_drawmenu_back(sel, row, pstr, dummy) lcd_implementation_drawmenu_generic(sel, row, pstr, LCD_UPLEVEL_CHAR,LCD_UPLEVEL_CHAR)
+  #define lcd_implementation_drawmenu_back(sel, row, pstr, dummy) lcd_implementation_drawmenu_generic(sel, row, pstr, LCD_UPLEVEL_CHAR, LCD_UPLEVEL_CHAR)
   #define lcd_implementation_drawmenu_submenu(sel, row, pstr, data) lcd_implementation_drawmenu_generic(sel, row, pstr, '>', LCD_STR_ARROW_RIGHT[0])
   #define lcd_implementation_drawmenu_gcode(sel, row, pstr, gcode) lcd_implementation_drawmenu_generic(sel, row, pstr, '>', ' ')
   #define lcd_implementation_drawmenu_function(sel, row, pstr, data) lcd_implementation_drawmenu_generic(sel, row, pstr, '>', ' ')
@@ -1071,16 +1092,523 @@ static void lcd_implementation_status_screen() {
       lcd.setBacklight(leds);
       ledsprev = leds;
     }
-
   }
 
 #endif // LCD_HAS_STATUS_INDICATORS
 
-#ifdef AUTO_BED_LEVELING_UBL
-    void lcd_return_to_status();       // These are just place holders for the 20x4 LCD work that
-    void _lcd_ubl_output_char_lcd() {  // is coming up very soon.   Soon this will morph into the
-      lcd_return_to_status();          // real code.
+#if ENABLED(AUTO_BED_LEVELING_UBL)
+
+   /**
+    Possible map screens:
+
+    16x2   |X000.00  Y000.00|
+           |(00,00)  Z00.000|
+
+    20x2   | X:000.00  Y:000.00 |
+           | (00,00)   Z:00.000 |
+
+    16x4   |+-------+(00,00)|
+           ||       |X000.00|
+           ||       |Y000.00|
+           |+-------+Z00.000|
+
+    20x4   | +-------+  (00,00) |
+           | |       |  X:000.00|
+           | |       |  Y:000.00|
+           | +-------+  Z:00.000|
+    */
+
+  struct custom_char {
+    uint8_t custom_char_bits[ULTRA_Y_PIXELS_PER_CHAR];
+  };
+
+  struct coordinate pixel_location(uint8_t x, uint8_t y);
+
+  struct coordinate {
+          uint8_t column;
+          uint8_t row;
+          uint8_t y_pixel_offset;
+          uint8_t x_pixel_offset;
+          uint8_t x_pixel_mask;
+  };
+
+  void add_edges_to_custom_char(struct custom_char *custom, struct coordinate *ul, struct coordinate *lr, struct coordinate *brc, uint8_t cell_location);
+  extern custom_char user_defined_chars[N_USER_CHARS];
+  inline static void CLEAR_CUSTOM_CHAR(struct custom_char *cc) { uint8_t j; for (j = 0; j < ULTRA_Y_PIXELS_PER_CHAR; j++) cc->custom_char_bits[j] = 0; }
+
+  /*
+  void dump_custom_char(char *title, struct custom_char *c) {   // This debug routine should be deleted by anybody that sees it.  It doesn't belong here
+    int i, j;                                                     // But I'm leaving it for now until we know the 20x4 Radar Map is working right.
+    SERIAL_PROTOCOLLN(title);                                   // We will need it again if any funny lines show up on the mesh points.
+    for(j=0; j<8; j++) {
+      for(i=7; i>=0; i--) {
+        if (c->custom_char_bits[j] & (0x01 << i))
+          SERIAL_PROTOCOL("1");
+        else
+          SERIAL_PROTOCOL("0");
+      }
+      SERIAL_PROTOCOL("\n");
     }
+    SERIAL_PROTOCOL("\n");
+  }
+  */
+
+  void lcd_implementation_ubl_plot(uint8_t x, uint8_t inverted_y) {
+
+    #if LCD_WIDTH >= 20
+      #define _LCD_W_POS 12
+      #define _PLOT_X 1
+      #define _MAP_X 3
+      #define _LABEL(C,X,Y) lcd.setCursor(X, Y); lcd.print(C)
+      #define _XLABEL(X,Y) _LABEL("X:",X,Y)
+      #define _YLABEL(X,Y) _LABEL("Y:",X,Y)
+      #define _ZLABEL(X,Y) _LABEL("Z:",X,Y)
+    #else
+      #define _LCD_W_POS 8
+      #define _PLOT_X 0
+      #define _MAP_X 1
+      #define _LABEL(X,Y,C) lcd.setCursor(X, Y); lcd.write(C)
+      #define _XLABEL(X,Y) _LABEL('X',X,Y)
+      #define _YLABEL(X,Y) _LABEL('Y',X,Y)
+      #define _ZLABEL(X,Y) _LABEL('Z',X,Y)
+    #endif
+
+    #if LCD_HEIGHT <= 3   // 16x2 or 20x2 display
+
+      /**
+       * Show X and Y positions
+       */
+      _XLABEL(_PLOT_X, 0);
+      lcd.print(ftostr32(LOGICAL_X_POSITION(pgm_read_float(&ubl._mesh_index_to_xpos[x]))));
+
+      _YLABEL(_LCD_W_POS, 0);
+      lcd.print(ftostr32(LOGICAL_Y_POSITION(pgm_read_float(&ubl._mesh_index_to_ypos[inverted_y]))));
+
+      lcd.setCursor(_PLOT_X, 0);
+
+    #else // 16x4 or 20x4 display
+
+      struct coordinate upper_left, lower_right, bottom_right_corner;
+      struct custom_char new_char;
+      uint8_t i, j, k, l, m, n, n_rows, n_cols, y;
+      uint8_t bottom_line, right_edge;
+      uint8_t x_map_pixels, y_map_pixels;
+      uint8_t pixels_per_X_mesh_pnt, pixels_per_Y_mesh_pnt;
+      uint8_t suppress_x_offset=0, suppress_y_offset=0;
+
+      //  ********************************************************
+      //  ************ Clear and setup everything        *********
+      //  ********************************************************
+
+      y = GRID_MAX_POINTS_Y - inverted_y - 1;
+
+      upper_left.column  = 0;
+      upper_left.row     = 0;
+      lower_right.column = 0;
+      lower_right.row    = 0;
+
+      lcd_implementation_clear();
+
+      x_map_pixels = ULTRA_X_PIXELS_PER_CHAR * ULTRA_COLUMNS_FOR_MESH_MAP - 2;  // minus 2 because we are drawing a box around the map
+      y_map_pixels = ULTRA_Y_PIXELS_PER_CHAR * ULTRA_ROWS_FOR_MESH_MAP - 2;
+
+      pixels_per_X_mesh_pnt = x_map_pixels / GRID_MAX_POINTS_X;
+      pixels_per_Y_mesh_pnt = y_map_pixels / GRID_MAX_POINTS_Y;
+
+      if (pixels_per_X_mesh_pnt >= ULTRA_X_PIXELS_PER_CHAR)  {                  // There are only 2 custom characters available, so the X
+        pixels_per_X_mesh_pnt = ULTRA_X_PIXELS_PER_CHAR;                        // size of the mesh point needs to fit within them independent
+        suppress_x_offset = 1;                                                  // of where the starting pixel is located.
+      }
+
+      if (pixels_per_Y_mesh_pnt >= ULTRA_Y_PIXELS_PER_CHAR) {                   // There are only 2 custom characters available, so the Y
+        pixels_per_Y_mesh_pnt = ULTRA_Y_PIXELS_PER_CHAR;                        // size of the mesh point needs to fit within them independent
+        suppress_y_offset = 1;                                                  // of where the starting pixel is located.
+      }
+
+      x_map_pixels = pixels_per_X_mesh_pnt * GRID_MAX_POINTS_X;                 // now we have the right number of pixels to make both
+      y_map_pixels = pixels_per_Y_mesh_pnt * GRID_MAX_POINTS_Y;                 // directions fit nicely
+
+      right_edge = pixels_per_X_mesh_pnt * GRID_MAX_POINTS_X + 1;               // find location of right edge within the character cell
+      bottom_line= pixels_per_Y_mesh_pnt * GRID_MAX_POINTS_Y + 1;               // find location of bottome line within the character cell
+
+      n_rows = (bottom_line / ULTRA_Y_PIXELS_PER_CHAR) + 1;
+      n_cols = (right_edge / ULTRA_X_PIXELS_PER_CHAR) + 1;
+
+      for (i = 0; i < n_cols; i++) {
+        lcd.setCursor(i, 0);
+        lcd.print((char) 0x00);                    // top line of the box
+
+        lcd.setCursor(i, n_rows-1);
+        lcd.write(0x01);                           // bottom line of the box
+      }
+
+      for (j = 0; j < n_rows; j++) {
+        lcd.setCursor(0, j);
+        lcd.write(0x02);                           // Left edge of the box
+        lcd.setCursor(n_cols-1, j);
+        lcd.write(0x03);                           // right edge of the box
+      }
+
+      //
+      /* if the entire 4th row is not in use, do not put vertical bars all the way down to the bottom of the display */
+      //
+
+      k = pixels_per_Y_mesh_pnt * GRID_MAX_POINTS_Y + 2;
+      l = ULTRA_Y_PIXELS_PER_CHAR * n_rows;
+      if ((k != l) && ((l-k)>=ULTRA_Y_PIXELS_PER_CHAR/2)) {
+        lcd.setCursor(0, n_rows-1);            // left edge of the box
+        lcd.write(' ');
+        lcd.setCursor(n_cols-1, n_rows-1);     // right edge of the box
+        lcd.write(' ');
+      }
+
+      CLEAR_CUSTOM_CHAR(&new_char);
+      new_char.custom_char_bits[0] = (unsigned char) 0B11111;                // char #0 is used for the top line of the box
+      lcd.createChar(0, (uint8_t *) &new_char);
+
+      CLEAR_CUSTOM_CHAR(&new_char);
+      k = GRID_MAX_POINTS_Y * pixels_per_Y_mesh_pnt + 1;                     // row of pixels for the bottom box line
+      l = k % ULTRA_Y_PIXELS_PER_CHAR;                                       // row within relivant character cell
+      new_char.custom_char_bits[l] = (unsigned char) 0B11111;                // char #1 is used for the bottom line of the box
+      lcd.createChar(1, (uint8_t *) &new_char);
+
+      CLEAR_CUSTOM_CHAR(&new_char);
+      for (j = 0; j < ULTRA_Y_PIXELS_PER_CHAR; j++)
+        new_char.custom_char_bits[j] = (unsigned char) 0B10000;              // char #2 is used for the left edge of the box
+      lcd.createChar(2, (uint8_t *) &new_char);
+
+      CLEAR_CUSTOM_CHAR(&new_char);
+      m = GRID_MAX_POINTS_X * pixels_per_X_mesh_pnt + 1;                     // column of pixels for the right box line
+      n = m % ULTRA_X_PIXELS_PER_CHAR;                                       // column within relivant character cell
+      i = ULTRA_X_PIXELS_PER_CHAR - 1 - n;                                   // column within relivant character cell (0 on the right)
+      for (j = 0; j < ULTRA_Y_PIXELS_PER_CHAR; j++)
+        new_char.custom_char_bits[j] = (unsigned char) 0B00001 << i;         // char #3 is used for the right edge of the box
+      lcd.createChar(3, (uint8_t *) &new_char);
+
+      i = x*pixels_per_X_mesh_pnt - suppress_x_offset;
+      j = y*pixels_per_Y_mesh_pnt - suppress_y_offset;
+      upper_left = pixel_location(i, j);
+
+      k = (x+1)*pixels_per_X_mesh_pnt-1-suppress_x_offset;
+      l = (y+1)*pixels_per_Y_mesh_pnt-1-suppress_y_offset;
+      lower_right = pixel_location(k, l);
+
+      bottom_right_corner = pixel_location(x_map_pixels, y_map_pixels);
+
+      /*
+       * First, handle the simple case where everything is within a single character cell.
+       * If part of the Mesh Plot is outside of this character cell, we will follow up
+       * and deal with that next.
+       */
+
+  //dump_custom_char("at entry:", &new_char);
+
+      CLEAR_CUSTOM_CHAR(&new_char);
+      for(j=upper_left.y_pixel_offset; j<upper_left.y_pixel_offset+pixels_per_Y_mesh_pnt; j++) {
+        if (j >= ULTRA_Y_PIXELS_PER_CHAR)
+          break;
+        i=upper_left.x_pixel_mask;
+        for(k=0; k<pixels_per_X_mesh_pnt; k++)  {
+          new_char.custom_char_bits[j] |= i;
+          i = i >> 1;
+        }
+      }
+  //dump_custom_char("after loops:", &new_char);
+
+      add_edges_to_custom_char(&new_char, &upper_left, &lower_right, &bottom_right_corner, TOP_LEFT);
+  //dump_custom_char("after add edges", &new_char);
+      lcd.createChar(4, (uint8_t *) &new_char);
+
+      lcd.setCursor(upper_left.column, upper_left.row);
+      lcd.write(0x04);
+  //dump_custom_char("after lcd update:", &new_char);
+
+      /*
+       * Next, check for two side by side character cells being used to display the Mesh Point
+       * If found...  do the right hand character cell next.
+       */
+      if (upper_left.column+1 == lower_right.column) {
+        l = upper_left.x_pixel_offset;
+        CLEAR_CUSTOM_CHAR(&new_char);
+        for (j = upper_left.y_pixel_offset; j < upper_left.y_pixel_offset + pixels_per_Y_mesh_pnt; j++) {
+          if (j >= ULTRA_Y_PIXELS_PER_CHAR)
+            break;
+          i=0x01 << (ULTRA_X_PIXELS_PER_CHAR-1);                  // fill in the left side of the right character cell
+          for(k=0; k<pixels_per_X_mesh_pnt-1-l; k++)  {
+            new_char.custom_char_bits[j] |= i;
+            i = i >> 1;
+          }
+        }
+        add_edges_to_custom_char(&new_char, &upper_left, &lower_right, &bottom_right_corner, TOP_RIGHT);
+
+        lcd.createChar(5, (uint8_t *) &new_char);
+
+        lcd.setCursor(lower_right.column, upper_left.row);
+        lcd.write(0x05);
+      }
+
+      /*
+       * Next, check for two character cells stacked on top of each other being used to display the Mesh Point
+       */
+      if (upper_left.row+1 == lower_right.row) {
+        l = ULTRA_Y_PIXELS_PER_CHAR - upper_left.y_pixel_offset;        // number of pixel rows in top character cell
+        k = pixels_per_Y_mesh_pnt - l;                                  // number of pixel rows in bottom character cell
+        CLEAR_CUSTOM_CHAR(&new_char);
+        for(j=0; j<k; j++) {
+          i=upper_left.x_pixel_mask;
+          for(m=0; m<pixels_per_X_mesh_pnt; m++)  {                     // fill in the top side of the bottom character cell
+            new_char.custom_char_bits[j] |= i;
+            i = i >> 1;
+            if (!i)
+              break;
+          }
+        }
+        add_edges_to_custom_char(&new_char, &upper_left, &lower_right, &bottom_right_corner, LOWER_LEFT);
+        lcd.createChar(6, (uint8_t *) &new_char);
+
+        lcd.setCursor(upper_left.column, lower_right.row);
+        lcd.write(0x06);
+      }
+
+      /*
+       * Next, check for four character cells being used to display the Mesh Point.  If that is
+       * what is here, we work to fill in the character cell that is down one and to the right one
+       * from the upper_left character cell.
+       */
+
+      if (upper_left.column+1 == lower_right.column && upper_left.row+1 == lower_right.row) {
+        l = ULTRA_Y_PIXELS_PER_CHAR - upper_left.y_pixel_offset;        // number of pixel rows in top character cell
+        k = pixels_per_Y_mesh_pnt - l;                                  // number of pixel rows in bottom character cell
+        CLEAR_CUSTOM_CHAR(&new_char);
+        for (j = 0; j<k; j++) {
+          l = upper_left.x_pixel_offset;
+          i = 0x01 << (ULTRA_X_PIXELS_PER_CHAR - 1);                    // fill in the left side of the right character cell
+          for (m = 0; m<pixels_per_X_mesh_pnt - 1 - l; m++) {           // fill in the top side of the bottom character cell
+            new_char.custom_char_bits[j] |= i;
+            i = i >> 1;
+          }
+        }
+        add_edges_to_custom_char(&new_char, &upper_left, &lower_right, &bottom_right_corner, LOWER_RIGHT);
+        lcd.createChar(7, (uint8_t *) &new_char);
+
+        lcd.setCursor(lower_right.column, lower_right.row);
+        lcd.write(0x07);
+      }
+
+    #endif
+
+      /**
+       * Print plot position
+       */
+      lcd.setCursor(_LCD_W_POS, 0);
+      lcd.write('(');
+      lcd.print(x);
+      lcd.write(',');
+      lcd.print(inverted_y);
+      lcd.write(')');
+
+    #if LCD_HEIGHT <= 3   // 16x2 or 20x2 display
+
+      /**
+       * Print Z values
+       */
+      _ZLABEL(_LCD_W_POS, 1);
+      if (!isnan(ubl.z_values[x][inverted_y]))
+        lcd.print(ftostr43sign(ubl.z_values[x][inverted_y]));
+      else
+        lcd_printPGM(PSTR(" -----"));
+
+    #else                 // 16x4 or 20x4 display
+
+      /**
+       * Show all values at right of screen
+       */
+      _XLABEL(_LCD_W_POS, 1);
+      lcd.print(ftostr32(LOGICAL_X_POSITION(pgm_read_float(&ubl._mesh_index_to_xpos[x]))));
+      _YLABEL(_LCD_W_POS, 2);
+      lcd.print(ftostr32(LOGICAL_Y_POSITION(pgm_read_float(&ubl._mesh_index_to_ypos[inverted_y]))));
+
+      /**
+       * Show the location value
+       */
+      _ZLABEL(_LCD_W_POS, 3);
+      if (!isnan(ubl.z_values[x][inverted_y]))
+        lcd.print(ftostr43sign(ubl.z_values[x][inverted_y]));
+      else
+        lcd_printPGM(PSTR(" -----"));
+
+    #endif // LCD_HEIGHT > 3
+
+    return;
+  }
+void add_edges_to_custom_char(struct custom_char *custom, struct coordinate *ul, struct coordinate *lr, struct coordinate *brc, unsigned char cell_location) {
+  unsigned char i, k;
+  int n_rows, n_cols;
+
+  n_rows = lr->row    - ul->row    + 1;
+  n_cols = lr->column - ul->column + 1;
+
+  /*
+   * Check if Top line of box needs to be filled in
+   */
+  if ((ul->row == 0) && ((cell_location&TOP_LEFT) || (cell_location&TOP_RIGHT))) {   // Only fill in the top line for the top character cells
+
+    if (n_cols == 1)  {
+      if (ul->column != brc->column)
+        custom->custom_char_bits[0] = 0xff;                              // single column in middle
+      else {
+        for (i = brc->x_pixel_offset; i<ULTRA_X_PIXELS_PER_CHAR; i++)    // single column on right side
+          custom->custom_char_bits[0] |= 0x01 << i;
+      }
+    } 
+    else {                                                            
+      if (cell_location & TOP_LEFT)
+        custom->custom_char_bits[0] = 0xff;                              // multiple column in the middle
+      else
+        if (lr->column != brc->column)                                     
+          custom->custom_char_bits[0] = 0xff;                            // multiple column with right cell in middle
+        else {
+          for (i = brc->x_pixel_offset; i<ULTRA_X_PIXELS_PER_CHAR; i++)
+            custom->custom_char_bits[0] |= 0x01 << i;
+        }
+    }
+  }
+
+  /*
+   * Check if left line of box needs to be filled in
+   */
+  if ((cell_location & TOP_LEFT) || (cell_location & LOWER_LEFT)) {
+    if (ul->column == 0) {                          // Left column of characters on LCD Display
+      if (ul->row != brc->row)
+        k = ULTRA_Y_PIXELS_PER_CHAR;      // if it isn't the last row... do the full character cell
+      else
+        k = brc->y_pixel_offset;
+
+      for (i = 0; i < k; i++)
+        custom->custom_char_bits[i] |= 0x01 << (ULTRA_X_PIXELS_PER_CHAR - 1);
+    }
+  }
+
+  /*
+   * Check if bottom line of box needs to be filled in
+   */
+
+   // Single row of mesh plot cells
+   if ((n_rows==1) /* && ((cell_location == TOP_LEFT) || (cell_location==TOP_RIGHT)) */) {
+     if (ul->row == brc->row)  {
+       if (n_cols == 1) {                 // single row, single column case
+          if (ul->column != brc->column) 
+            k = 0x01;
+          else 
+            k = brc->x_pixel_mask;
+       } else {
+          if (cell_location & TOP_RIGHT) {  // single row, multiple column case
+            if(lr->column != brc->column)   
+              k = 0x01;
+            else 
+              k = brc->x_pixel_mask;
+          } else                            // single row, left of multiple columns
+            k = 0x01;
+       }
+       while (k < (0x01 << ULTRA_X_PIXELS_PER_CHAR)) {
+         custom->custom_char_bits[brc->y_pixel_offset] |= k;
+         k = k << 1;
+       }
+     }
+   }
+
+
+  // Double row of characters on LCD Display
+  // And this is a bottom custom character
+   if ((n_rows==2) && ((cell_location == LOWER_LEFT) || (cell_location==LOWER_RIGHT))) {
+     if (lr->row == brc->row)  {
+       if (n_cols == 1) {                 // double row, single column case
+          if (ul->column != brc->column) 
+            k = 0x01;
+          else 
+            k = brc->x_pixel_mask;
+       } else {
+          if (cell_location & LOWER_RIGHT) {  // double row, multiple column case
+            if(lr->column != brc->column)   
+              k = 0x01;
+            else 
+              k = brc->x_pixel_mask;
+          } else                            // double row, left of multiple columns
+            k = 0x01;
+       }
+       while (k < (0x01 << ULTRA_X_PIXELS_PER_CHAR)) {
+         custom->custom_char_bits[brc->y_pixel_offset] |= k;
+         k = k << 1;
+       }
+     }
+   }
+
+   /*
+    * Check if right line of box needs to be filled in
+    */
+
+   if (lr->column == brc->column) {     // nothing to do if the lower right part of the mesh pnt isn't in the same column as the box line
+     if ((ul->column == brc->column) ||
+        ((lr->column == brc->column) && (cell_location&TOP_RIGHT)) ||
+        ((lr->column == brc->column) && (cell_location&LOWER_RIGHT))) {   // This mesh point is in the same character cell as the right box line
+
+       if (ul->row != brc->row)
+         k = ULTRA_Y_PIXELS_PER_CHAR;      // if it isn't the last row... do the full character cell
+       else
+         k = brc->y_pixel_offset;
+
+       for (i = 0; i < k; i++)
+         custom->custom_char_bits[i] |= brc->x_pixel_mask;
+     }
+   }
+ }
+
+  struct coordinate pixel_location(int x, int y) {
+    struct coordinate ret_val;
+    int xp, yp, r, c;
+
+    x++;  // +1 because there is a line on the left 
+    y++;  // and a line at the top to make the box
+
+    c = x / ULTRA_X_PIXELS_PER_CHAR;
+    r = y / ULTRA_Y_PIXELS_PER_CHAR;
+
+    ret_val.column = c;
+    ret_val.row    = r;
+
+    xp = x - c * ULTRA_X_PIXELS_PER_CHAR;   // get the pixel offsets into the character cell
+    xp = ULTRA_X_PIXELS_PER_CHAR - 1 - xp;  // column within relivant character cell (0 on the right)
+    yp = y - r * ULTRA_Y_PIXELS_PER_CHAR;
+
+    ret_val.x_pixel_mask   = 0x01 << xp;
+    ret_val.x_pixel_offset = xp;
+    ret_val.y_pixel_offset = yp;
+    return ret_val;
+  }
+
+  struct coordinate pixel_location(uint8_t x, uint8_t y) {
+    struct coordinate ret_val;
+    uint8_t xp, yp, r, c;
+
+    x++;  // +1 because there is a line on the left
+    y++;  // and a line at the top to make the box
+
+    c = x / ULTRA_X_PIXELS_PER_CHAR;
+    r = y / ULTRA_Y_PIXELS_PER_CHAR;
+
+    ret_val.column = c;
+    ret_val.row    = r;
+
+    xp = x - c * ULTRA_X_PIXELS_PER_CHAR;   // get the pixel offsets into the character cell
+    xp = ULTRA_X_PIXELS_PER_CHAR - 1 - xp;  // column within relivant character cell (0 on the right)
+    yp = y - r * ULTRA_Y_PIXELS_PER_CHAR;
+
+    ret_val.x_pixel_mask   = 0x01 << xp;
+    ret_val.x_pixel_offset = xp;
+    ret_val.y_pixel_offset = yp;
+
+    return ret_val;
+  }
 
 #endif // AUTO_BED_LEVELING_UBL
 
