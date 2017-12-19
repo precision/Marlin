@@ -96,8 +96,6 @@
   #define BOARD_NAME "Anet"
 #endif
 
-#define LARGE_FLASH true
-
 //
 // Limit Switches
 //
@@ -147,10 +145,10 @@
  * LCD / Controller
  *
  * Only the following displays are supported:
- *  ANET_KEYPAD_LCD
+ *  ZONESTAR_LCD
  *  ANET_FULL_GRAPHICS_LCD
  *  REPRAP_DISCOUNT_FULL_GRAPHIC_SMART_CONTROLLER
-*/
+ */
 
 #if ENABLED(ULTRA_LCD) && ENABLED(NEWPANEL)
   #define LCD_SDSS           28
@@ -166,7 +164,6 @@
     #define BTN_EN2          -1
     #define BTN_ENC          -1
     #define ADC_KEYPAD_PIN    1
-    #define ENCODER_FEEDRATE_DEADZONE 2
   #elif ENABLED(REPRAP_DISCOUNT_FULL_GRAPHIC_SMART_CONTROLLER) || ENABLED(ANET_FULL_GRAPHICS_LCD)
     // Pin definitions for the Anet A6 Full Graphics display and the RepRapDiscount Full Graphics
     // display using an adapter board  // https://go.aisler.net/benlye/anet-lcd-adapter/pcb
@@ -212,7 +209,7 @@
  * ===================== LCD PINOUTS ==================================
  * ====================================================================
  *
- *   Anet V1.0 controller           | ANET_KEYPAD_LCD   | ANET_FULL_      | RepRapDiscount Full      | Thingiverse RepRap wiring
+ *   Anet V1.0 controller           | ZONESTAR_LCD      | ANET_FULL_      | RepRapDiscount Full      | Thingiverse RepRap wiring
  *   physical   logical   alt       |                   | GRAPHICS_LCD    | Graphics Display Wiring  | http://www.thingiverse
  *     pin        pin     functions |                   |                 |                          | .com/thing:2103748
  *------------------------------------------------------------------------------------------------------------------------
