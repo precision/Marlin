@@ -541,7 +541,7 @@
  * Override with M203
  *                                      X, Y, Z, E0 [, E1[, E2[, E3[, E4]]]]
  */
-#define DEFAULT_MAX_FEEDRATE          { 500, 500, 12, 50 }
+#define DEFAULT_MAX_FEEDRATE          { 500, 500, 12, 120 }
 
 /**
  * Default Max Acceleration (change/s) change = mm/s
@@ -549,7 +549,7 @@
  * Override with M201
  *                                      X, Y, Z, E0 [, E1[, E2[, E3[, E4]]]]
  */
-#define DEFAULT_MAX_ACCELERATION      { 2000, 2000, 10, 10000 }
+#define DEFAULT_MAX_ACCELERATION      { 1000, 1000, 200, 5000 }
 
 /**
  * Default Acceleration (change/s) change = mm/s
@@ -559,8 +559,8 @@
  *   M204 R    Retract Acceleration
  *   M204 T    Travel Acceleration
  */
-#define DEFAULT_ACCELERATION          2000    // X, Y, Z and E acceleration for printing moves
-#define DEFAULT_RETRACT_ACCELERATION  600     // E acceleration for retracts
+#define DEFAULT_ACCELERATION          1250    // X, Y, Z and E acceleration for printing moves
+#define DEFAULT_RETRACT_ACCELERATION  1250     // E acceleration for retracts
 #define DEFAULT_TRAVEL_ACCELERATION   2000    // X, Y, Z acceleration for travel (non printing) moves
 
 /**
@@ -574,7 +574,7 @@
 #define DEFAULT_XJERK                 15.0
 #define DEFAULT_YJERK                 15.0
 #define DEFAULT_ZJERK                  0.4
-#define DEFAULT_EJERK                  5.0
+#define DEFAULT_EJERK                  2.5
 
 //===========================================================================
 //============================= Z Probe Options =============================
