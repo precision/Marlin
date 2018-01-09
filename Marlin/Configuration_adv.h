@@ -890,7 +890,7 @@
                                               //   For direct drive, the full length of the nozzle.
                                               //   Set to 0 for manual unloading.
   #define FILAMENT_CHANGE_LOAD_FEEDRATE 6     // (mm/s) Load filament feedrate. This can be pretty fast.
-  #define FILAMENT_CHANGE_LOAD_LENGTH 0       // (mm) Load length of filament, from extruder gear to nozzle.
+  #define FILAMENT_CHANGE_LOAD_LENGTH 50       // (mm) Load length of filament, from extruder gear to nozzle.
                                               //   For Bowden, the full length of the tube and nozzle.
                                               //   For direct drive, the full length of the nozzle.
   #define ADVANCED_PAUSE_EXTRUDE_FEEDRATE 3   // (mm/s) Extrude feedrate (after loading). Should be slower than load feedrate.
