@@ -282,9 +282,11 @@ void lcd_printPGM_utf(const char *str, uint8_t n=LCD_WIDTH) {
 
     void lcd_custom_bootscreen() {
       constexpr u8g_uint_t left = (LCD_PIXEL_WIDTH  - (CUSTOM_BOOTSCREEN_BMPWIDTH)) / 2,
-                           top = (LCD_PIXEL_HEIGHT - (CUSTOM_BOOTSCREEN_BMPHEIGHT)) / 2,
-                           right = left + CUSTOM_BOOTSCREEN_BMPWIDTH,
-                           bottom = top + CUSTOM_BOOTSCREEN_BMPHEIGHT;
+                           top = (LCD_PIXEL_HEIGHT - (CUSTOM_BOOTSCREEN_BMPHEIGHT)) / 2;
+      #if ENABLED(CUSTOM_BOOTSCREEN_INVERTED)
+        constexpr u8g_uint_t right = left + CUSTOM_BOOTSCREEN_BMPWIDTH,
+                             bottom = top + CUSTOM_BOOTSCREEN_BMPHEIGHT;
+      #endif
       u8g.firstPage();
       do {
         u8g.drawBitmapP(
@@ -352,12 +354,21 @@ static void lcd_implementation_init() {
     OUT_WRITE(LCD_BACKLIGHT_PIN, HIGH);
   #endif
 
+  #if ENABLED(MKS_12864OLED) || ENABLED(MKS_12864OLED_SSD1306)
+    OUT_WRITE(LCD_PINS_RS, LOW);
+    _delay_ms(500);
+    OUT_WRITE(LCD_PINS_RS, HIGH);
+  #endif
+
   #if PIN_EXISTS(LCD_RESET)
     OUT_WRITE(LCD_RESET_PIN, LOW); // perform a clean hardware reset
     _delay_ms(5);
     OUT_WRITE(LCD_RESET_PIN, HIGH);
     _delay_ms(5); // delay to allow the display to initalize
-    u8g.begin(); // re-initialize the display
+  #endif
+
+  #if PIN_EXISTS(LCD_RESET) || ENABLED(MKS_12864OLED) || ENABLED(MKS_12864OLED_SSD1306)
+    u8g.begin();
   #endif
 
   #if DISABLED(MINIPANEL) // setContrast not working for Mini Panel

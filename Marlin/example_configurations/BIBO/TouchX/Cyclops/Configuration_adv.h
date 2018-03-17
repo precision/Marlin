@@ -75,8 +75,8 @@
  * THERMAL_PROTECTION_HYSTERESIS and/or THERMAL_PROTECTION_PERIOD
  */
 #if ENABLED(THERMAL_PROTECTION_HOTENDS)
-  #define THERMAL_PROTECTION_PERIOD 40        // Seconds
-  #define THERMAL_PROTECTION_HYSTERESIS 4     // Degrees Celsius
+  #define THERMAL_PROTECTION_PERIOD 45        // Seconds
+  #define THERMAL_PROTECTION_HYSTERESIS 2     // Degrees Celsius
 
   /**
    * Whenever an M104, M109, or M303 increases the target temperature, the
@@ -90,22 +90,22 @@
    * and/or decrease WATCH_TEMP_INCREASE. WATCH_TEMP_INCREASE should not be set
    * below 2.
    */
-  #define WATCH_TEMP_PERIOD 20                // Seconds
-  #define WATCH_TEMP_INCREASE 2               // Degrees Celsius
+  #define WATCH_TEMP_PERIOD 60                // Seconds
+  #define WATCH_TEMP_INCREASE 1               // Degrees Celsius
 #endif
 
 /**
  * Thermal Protection parameters for the bed are just as above for hotends.
  */
 #if ENABLED(THERMAL_PROTECTION_BED)
-  #define THERMAL_PROTECTION_BED_PERIOD 20    // Seconds
-  #define THERMAL_PROTECTION_BED_HYSTERESIS 2 // Degrees Celsius
+  #define THERMAL_PROTECTION_BED_PERIOD 60    // Seconds
+  #define THERMAL_PROTECTION_BED_HYSTERESIS 3 // Degrees Celsius
 
   /**
    * As described above, except for the bed (M140/M190/M303).
    */
   #define WATCH_BED_TEMP_PERIOD 60                // Seconds
-  #define WATCH_BED_TEMP_INCREASE 2               // Degrees Celsius
+  #define WATCH_BED_TEMP_INCREASE 1               // Degrees Celsius
 #endif
 
 #if ENABLED(PIDTEMP)
@@ -366,7 +366,7 @@
 // Homing hits each endstop, retracts by these distances, then does a slower bump.
 #define X_HOME_BUMP_MM 5
 #define Y_HOME_BUMP_MM 5
-#define Z_HOME_BUMP_MM 1
+#define Z_HOME_BUMP_MM 2
 #define HOMING_BUMP_DIVISOR { 2, 2, 4 }  // Re-Bump Speed Divisor (Divides the Homing Feedrate)
 //#define QUICK_HOME                     // If homing includes X and Y, do a diagonal move initially
 
@@ -406,7 +406,7 @@
 // @section lcd
 
 #if ENABLED(ULTIPANEL)
-  #define MANUAL_FEEDRATE {50*60, 50*60, 4*60, 0} // Feedrates for manual moves along X, Y, Z, E from panel
+  #define MANUAL_FEEDRATE {50*60, 50*60, 4*60, 60} // Feedrates for manual moves along X, Y, Z, E from panel
   #define ULTIPANEL_FEEDMULTIPLY  // Comment to disable setting feedrate multiplier via encoder
 #endif
 
@@ -507,6 +507,17 @@
 // Add an 'M73' G-code to set the current percentage
 //#define LCD_SET_PROGRESS_MANUALLY
 
+#if ENABLED(SDSUPPORT) || ENABLED(LCD_SET_PROGRESS_MANUALLY)
+  //#define LCD_PROGRESS_BAR              // Show a progress bar on HD44780 LCDs for SD printing
+  #if ENABLED(LCD_PROGRESS_BAR)
+    #define PROGRESS_BAR_BAR_TIME 2000    // (ms) Amount of time to show the bar
+    #define PROGRESS_BAR_MSG_TIME 3000    // (ms) Amount of time to show the status message
+    #define PROGRESS_MSG_EXPIRE   0       // (ms) Amount of time to retain the status message (0=forever)
+    //#define PROGRESS_MSG_ONCE           // Show the message for MSG_TIME then clear it
+    //#define LCD_PROGRESS_BAR_TEST       // Add a menu item to test the progress bar
+  #endif
+#endif // SDSUPPORT || LCD_SET_PROGRESS_MANUALLY
+
 /**
  * LED Control Menu
  * Enable this feature to add LED Control to the LCD menu
@@ -581,22 +592,6 @@
                                       // Note: Only affects SCROLL_LONG_FILENAMES with SDSORT_CACHE_NAMES but not SDSORT_DYNAMIC_RAM.
   #endif
 
-  // Show a progress bar on HD44780 LCDs for SD printing
-  //#define LCD_PROGRESS_BAR
-
-  #if ENABLED(LCD_PROGRESS_BAR)
-    // Amount of time (ms) to show the bar
-    #define PROGRESS_BAR_BAR_TIME 2000
-    // Amount of time (ms) to show the status message
-    #define PROGRESS_BAR_MSG_TIME 3000
-    // Amount of time (ms) to retain the status message (0=forever)
-    #define PROGRESS_MSG_EXPIRE   0
-    // Enable this to show messages for MSG_TIME then hide them
-    //#define PROGRESS_MSG_ONCE
-    // Add a menu item to test the progress bar:
-    //#define LCD_PROGRESS_BAR_TEST
-  #endif
-
   // This allows hosts to request long names for files and folders with M33
   //#define LONG_FILENAME_HOST_SUPPORT
 
@@ -616,6 +611,11 @@
    * You can just click to start the print, or navigate elsewhere.
    */
   //#define SD_REPRINT_LAST_SELECTED_FILE
+
+  /**
+   * Auto-report SdCard status with M27 S<seconds>
+   */
+  //#define AUTO_REPORT_SD_STATUS
 
 #endif // SDSUPPORT
 
@@ -665,6 +665,9 @@
      * Since LIGHTWEIGHT_UI has limited space, the position and status
      * message occupy the same line. Set STATUS_EXPIRE_SECONDS to the
      * length of time to display the status message before clearing.
+     *
+     * Set STATUS_EXPIRE_SECONDS to zero to never clear the status.
+     * This will prevent position updates from being displayed.
      */
     //#define LIGHTWEIGHT_UI
     #if ENABLED(LIGHTWEIGHT_UI)
@@ -776,7 +779,8 @@
 
 // The minimum pulse width (in µs) for stepping a stepper.
 // Set this if you find stepping unreliable, or if using a very fast CPU.
-#define MINIMUM_STEPPER_PULSE 0 // (µs) The smallest stepper pulse allowed
+// 0 is OK for AVR, 0 is OK for A4989 drivers, 2 is needed for DRV8825 drivers
+#define MINIMUM_STEPPER_PULSE 2
 
 // @section temperature
 
@@ -942,21 +946,19 @@
  * You will need to import the TMC26XStepper library into the Arduino IDE for this
  * (https://github.com/trinamic/TMC26XStepper.git)
  */
-//#define HAVE_TMCDRIVER
-
-#if ENABLED(HAVE_TMCDRIVER)
-
-  //#define X_IS_TMC
-  //#define X2_IS_TMC
-  //#define Y_IS_TMC
-  //#define Y2_IS_TMC
-  //#define Z_IS_TMC
-  //#define Z2_IS_TMC
-  //#define E0_IS_TMC
-  //#define E1_IS_TMC
-  //#define E2_IS_TMC
-  //#define E3_IS_TMC
-  //#define E4_IS_TMC
+//#define HAVE_TMC26X
+#if ENABLED(HAVE_TMC26X)  // Choose your axes here. This is mandatory!
+  //#define X_IS_TMC26X
+  //#define X2_IS_TMC26X
+  //#define Y_IS_TMC26X
+  //#define Y2_IS_TMC26X
+  //#define Z_IS_TMC26X
+  //#define Z2_IS_TMC26X
+  //#define E0_IS_TMC26X
+  //#define E1_IS_TMC26X
+  //#define E2_IS_TMC26X
+  //#define E3_IS_TMC26X
+  //#define E4_IS_TMC26X
 
   #define X_MAX_CURRENT     1000 // in mA
   #define X_SENSE_RESISTOR    91 // in mOhms
@@ -1004,7 +1006,7 @@
 
 #endif
 
-// @section TMC2130, TMC2208
+// @section tmc_smart
 
 /**
  * Enable this for SilentStepStick Trinamic TMC2130 SPI-configurable stepper drivers.
@@ -1018,6 +1020,19 @@
  * You may also use software SPI if you wish to use general purpose IO pins.
  */
 //#define HAVE_TMC2130
+#if ENABLED(HAVE_TMC2130)  // Choose your axes here. This is mandatory!
+  //#define X_IS_TMC2130
+  //#define X2_IS_TMC2130
+  //#define Y_IS_TMC2130
+  //#define Y2_IS_TMC2130
+  //#define Z_IS_TMC2130
+  //#define Z2_IS_TMC2130
+  //#define E0_IS_TMC2130
+  //#define E1_IS_TMC2130
+  //#define E2_IS_TMC2130
+  //#define E3_IS_TMC2130
+  //#define E4_IS_TMC2130
+#endif
 
 /**
  * Enable this for SilentStepStick Trinamic TMC2208 UART-configurable stepper drivers.
@@ -1030,22 +1045,7 @@
  * (https://github.com/teemuatlut/TMC2208Stepper).
  */
 //#define HAVE_TMC2208
-
-#if ENABLED(HAVE_TMC2130) || ENABLED(HAVE_TMC2208)
-
-  // CHOOSE YOUR MOTORS HERE, THIS IS MANDATORY
-  //#define X_IS_TMC2130
-  //#define X2_IS_TMC2130
-  //#define Y_IS_TMC2130
-  //#define Y2_IS_TMC2130
-  //#define Z_IS_TMC2130
-  //#define Z2_IS_TMC2130
-  //#define E0_IS_TMC2130
-  //#define E1_IS_TMC2130
-  //#define E2_IS_TMC2130
-  //#define E3_IS_TMC2130
-  //#define E4_IS_TMC2130
-
+#if ENABLED(HAVE_TMC2208)  // Choose your axes here. This is mandatory!
   //#define X_IS_TMC2208
   //#define X2_IS_TMC2208
   //#define Y_IS_TMC2208
@@ -1057,10 +1057,9 @@
   //#define E2_IS_TMC2208
   //#define E3_IS_TMC2208
   //#define E4_IS_TMC2208
+#endif
 
-  /**
-   * Stepper driver settings
-   */
+#if ENABLED(HAVE_TMC2130) || ENABLED(HAVE_TMC2208)
 
   #define R_SENSE           0.11  // R_sense resistor for SilentStepStick2130
   #define HOLD_MULTIPLIER    0.5  // Scales down the holding current from run current
