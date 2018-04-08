@@ -533,7 +533,7 @@ void CardReader::removeFile(const char * const name) {
 }
 
 void CardReader::getStatus() {
-  if (cardOK) {
+  if (cardOK && sdprinting) {
     SERIAL_PROTOCOLPGM(MSG_SD_PRINTING_BYTE);
     SERIAL_PROTOCOL(sdpos);
     SERIAL_PROTOCOLCHAR('/');
@@ -936,6 +936,9 @@ void CardReader::printingHasFinished() {
       enqueue_and_echo_commands_P(PSTR("M31"));
     #if ENABLED(SDCARD_SORT_ALPHA)
       presort();
+    #endif
+    #if ENABLED(ULTRA_LCD) && ENABLED(LCD_SET_PROGRESS_MANUALLY)
+      progress_bar_percent = 0;
     #endif
     #if ENABLED(SD_REPRINT_LAST_SELECTED_FILE)
       lcd_reselect_last_file();
