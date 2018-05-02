@@ -85,8 +85,8 @@ Planner planner;
  * A ring buffer of moves described in steps
  */
 block_t Planner::block_buffer[BLOCK_BUFFER_SIZE];
-volatile uint8_t Planner::block_buffer_head = 0,           // Index of the next block to be pushed
-                 Planner::block_buffer_tail = 0;
+volatile uint8_t Planner::block_buffer_head, // Index of the next block to be pushed
+                 Planner::block_buffer_tail;
 
 float Planner::max_feedrate_mm_s[XYZE_N], // Max speeds in mm per second
       Planner::axis_steps_per_mm[XYZE_N],
@@ -192,7 +192,6 @@ float Planner::previous_speed[NUM_AXIS],
 Planner::Planner() { init(); }
 
 void Planner::init() {
-  block_buffer_head = block_buffer_tail = 0;
   ZERO(position);
   #if HAS_POSITION_FLOAT
     ZERO(position_float);
@@ -202,6 +201,7 @@ void Planner::init() {
   #if ABL_PLANAR
     bed_level_matrix.set_to_identity();
   #endif
+  clear_block_buffer();
 }
 
 #define MINIMAL_STEP_RATE 120
@@ -1436,7 +1436,7 @@ void Planner::_buffer_steps(const int32_t (&target)[XYZE]
   const float v_allowable = max_allowable_speed(-block->acceleration, MINIMUM_PLANNER_SPEED, block->millimeters);
   // If stepper ISR is disabled, this indicates buffer_segment wants to add a split block.
   // In this case start with the max. allowed speed to avoid an interrupted first move.
-  block->entry_speed = TEST(TIMSK1, OCIE1A) ? MINIMUM_PLANNER_SPEED : min(vmax_junction, v_allowable);
+  block->entry_speed = STEPPER_ISR_ENABLED() ? MINIMUM_PLANNER_SPEED : min(vmax_junction, v_allowable);
 
   // Initialize planner efficiency flags
   // Set flag if block will always reach maximum junction speed regardless of entry/exit speeds.
@@ -1655,7 +1655,7 @@ void Planner::set_position_mm(const AxisEnum axis, const float &v) {
   #if HAS_POSITION_FLOAT
     position_float[axis] = v;
   #endif
-  stepper.set_position(axis, v);
+  stepper.set_position(axis, position[axis]);
   previous_speed[axis] = 0.0;
 }
 
