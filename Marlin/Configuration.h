@@ -37,7 +37,7 @@
  */
 #ifndef CONFIGURATION_H
 #define CONFIGURATION_H
-#define CONFIGURATION_H_VERSION 010107
+#define CONFIGURATION_H_VERSION 010109
 
 //===========================================================================
 //============================= Getting Started =============================
@@ -259,6 +259,7 @@
  *
  * Temperature sensors available:
  *
+ *    -4 : thermocouple with AD8495
  *    -3 : thermocouple with MAX31855 (only for sensor 0)
  *    -2 : thermocouple with MAX6675 (only for sensor 0)
  *    -1 : thermocouple with AD595
@@ -596,6 +597,17 @@
 #define DEFAULT_YJERK                 12.0
 #define DEFAULT_ZJERK                  0.25
 #define DEFAULT_EJERK                  2.5
+
+/**
+ * Realtime Jerk Control
+ *
+ * This option eliminates vibration during printing by fitting a Bézier
+ * curve to move acceleration, producing much smoother direction changes.
+ * Because this is computationally-intensive, a 32-bit MCU is required.
+ *
+ * See https://github.com/synthetos/TinyG/wiki/Jerk-Controlled-Motion-Explained
+ */
+//#define BEZIER_JERK_CONTROL
 
 //===========================================================================
 //============================= Z Probe Options =============================
