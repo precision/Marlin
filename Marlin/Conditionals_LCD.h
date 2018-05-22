@@ -111,13 +111,13 @@
 
     #define REPRAP_DISCOUNT_FULL_GRAPHIC_SMART_CONTROLLER
     #ifndef ST7920_DELAY_1
-      #define ST7920_DELAY_1 DELAY_2_NOP
+      #define ST7920_DELAY_1 DELAY_NS(125)
     #endif
     #ifndef ST7920_DELAY_2
-      #define ST7920_DELAY_2 DELAY_2_NOP
+      #define ST7920_DELAY_2 DELAY_NS(125)
     #endif
     #ifndef ST7920_DELAY_3
-      #define ST7920_DELAY_3 DELAY_2_NOP
+      #define ST7920_DELAY_3 DELAY_NS(125)
     #endif
 
   #elif ENABLED(MKS_12864OLED)
@@ -290,6 +290,10 @@
     #endif
   #endif
 
+  #if ENABLED(NO_LCD_MENUS)
+    #undef ULTIPANEL
+  #endif
+
   #if ENABLED(ULTIPANEL)
     #define NEWPANEL  // Disable this if you actually have no click-encoder panel
     #define ULTRA_LCD
@@ -367,11 +371,6 @@
     #endif
   #endif
 
-  #if ENABLED(NO_LCD_MENUS)
-    #undef ULTIPANEL
-    #undef NEWPANEL
-  #endif
-
   // Boot screens
   #if DISABLED(ULTRA_LCD)
     #undef SHOW_BOOTSCREEN
@@ -404,9 +403,6 @@
     #undef HOTEND_OFFSET_Y
   #else                                                         // Two hotends
     #define HOTENDS       EXTRUDERS
-    #if ENABLED(SWITCHING_NOZZLE) && !defined(HOTEND_OFFSET_Z)
-      #define HOTEND_OFFSET_Z { 0 }
-    #endif
   #endif
 
   #if ENABLED(SWITCHING_EXTRUDER)                               // One stepper for every two EXTRUDERS
@@ -427,6 +423,8 @@
     #define E_STEPPERS      EXTRUDERS
     #define E_MANUAL        EXTRUDERS
   #endif
+
+  #define DO_SWITCH_EXTRUDER (ENABLED(SWITCHING_EXTRUDER) && (DISABLED(SWITCHING_NOZZLE) || SWITCHING_EXTRUDER_SERVO_NR != SWITCHING_NOZZLE_SERVO_NR))
 
   /**
    * DISTINCT_E_FACTORS affects how some E factors are accessed

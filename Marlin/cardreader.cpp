@@ -921,7 +921,7 @@ uint16_t CardReader::get_num_Files() {
 }
 
 void CardReader::printingHasFinished() {
-  stepper.synchronize();
+  planner.synchronize();
   file.close();
   if (file_subcall_ctr > 0) { // Heading up to a parent file that called current as a procedure.
     file_subcall_ctr--;
@@ -941,7 +941,7 @@ void CardReader::printingHasFinished() {
     #endif
 
     #if ENABLED(SD_FINISHED_STEPPERRELEASE) && defined(SD_FINISHED_RELEASECOMMAND)
-      stepper.cleaning_buffer_counter = 1; // The command will fire from the Stepper ISR
+      planner.finish_and_disable();
     #endif
     print_job_timer.stop();
     if (print_job_timer.duration() > 60)
