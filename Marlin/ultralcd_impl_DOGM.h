@@ -71,8 +71,10 @@
 #if ENABLED(USE_SMALL_INFOFONT)
   #include "dogm_font_data_6x9_marlin.h"
   #define FONT_STATUSMENU_NAME u8g_font_6x9
+  #define INFO_FONT_HEIGHT 7
 #else
   #define FONT_STATUSMENU_NAME FONT_MENU_NAME
+  #define INFO_FONT_HEIGHT 8
 #endif
 
 #include "dogm_font_data_Marlin_symbols.h"   // The Marlin special symbols
@@ -601,7 +603,7 @@ void lcd_implementation_clear() { } // Automatically cleared by Picture Loop
               name_hash = ((name_hash << 1) | (name_hash >> 7)) ^ filename[l];  // rotate, xor
             if (filename_scroll_hash != name_hash) {                            // If the hash changed...
               filename_scroll_hash = name_hash;                                 // Save the new hash
-              filename_scroll_max = max(0, lcd_strlen(longFilename) - maxlen);  // Update the scroll limit
+              filename_scroll_max = MAX(0, lcd_strlen(longFilename) - maxlen);  // Update the scroll limit
               filename_scroll_pos = 0;                                          // Reset scroll to the start
               lcd_status_update_delay = 8;                                      // Don't scroll right away
             }
@@ -689,10 +691,10 @@ void lcd_implementation_clear() { } // Automatically cleared by Picture Loop
       if (PAGE_UNDER(7)) {
         u8g.setPrintPos(5, 7);
         lcd_print("X:");
-        lcd_print(ftostr32(LOGICAL_X_POSITION(pgm_read_float(&ubl._mesh_index_to_xpos[x_plot]))));
+        lcd_print(ftostr52(LOGICAL_X_POSITION(pgm_read_float(&ubl._mesh_index_to_xpos[x_plot]))));
         u8g.setPrintPos(74, 7);
         lcd_print("Y:");
-        lcd_print(ftostr32(LOGICAL_Y_POSITION(pgm_read_float(&ubl._mesh_index_to_ypos[y_plot]))));
+        lcd_print(ftostr52(LOGICAL_Y_POSITION(pgm_read_float(&ubl._mesh_index_to_ypos[y_plot]))));
       }
 
       // Print plot position
