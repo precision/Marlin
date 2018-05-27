@@ -138,11 +138,12 @@
 
 // Optional custom name for your RepStrap or other custom machine
 // Displayed in the LCD "Ready" message
-//#define CUSTOM_MACHINE_NAME "3D Printer"
+#define CUSTOM_MACHINE_NAME "Kitten"
 
 // Define this to set a unique identifier for this printer, (Used by some programs to differentiate between machines)
 // You can use an online service to generate a random UUID. (eg http://www.uuidgenerator.net/version4)
-//#define MACHINE_UUID "00000000-0000-0000-0000-000000000000"
+#define MACHINE_UUID "10c08d5d-2c23-427e-a80c-1f09a6fbbab9"
+
 
 // @section extruder
 
@@ -610,7 +611,7 @@
  * Override with M203
  *                                      X, Y, Z, E0 [, E1[, E2[, E3[, E4]]]]
  */
-#define DEFAULT_MAX_FEEDRATE          { 150, 150, 10, 40 }
+#define DEFAULT_MAX_FEEDRATE          { 200, 200, 10, 40 }
 
 /**
  * Default Max Acceleration (change/s) change = mm/s
@@ -876,8 +877,8 @@
 // @section machine
 
 // The size of the print bed
-#define X_BED_SIZE 100
-#define Y_BED_SIZE 100
+#define X_BED_SIZE 98
+#define Y_BED_SIZE 98
 
 // Travel limits (mm) after homing, corresponding to endstop positions.
 #define X_MIN_POS 0
