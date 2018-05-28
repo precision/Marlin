@@ -41,7 +41,7 @@ int8_t libServo::attach(const int pin, const int min, const int max) {
 void libServo::move(const int value) {
   if (this->attach(0) >= 0) {
     this->write(value);
-    delay(SERVO_DELAY);
+    safe_delay(this->servo_delay[this->servoIndex]);
     #if ENABLED(DEACTIVATE_SERVOS_AFTER_MOVE)
       this->detach();
     #endif

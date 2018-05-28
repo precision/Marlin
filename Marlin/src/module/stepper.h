@@ -75,10 +75,10 @@ class Stepper {
 
   private:
 
-    static uint8_t last_direction_bits,           // The next stepping-bits to be output
-                   last_movement_extruder;        // Last movement extruder, as computed when the last movement was fetched from planner
-    static bool abort_current_block,              // Signals to the stepper that current block should be aborted
-                last_movement_non_null[NUM_AXIS]; // Last Movement in the given direction is not null, as computed when the last movement was fetched from planner
+    static uint8_t last_direction_bits,     // The next stepping-bits to be output
+                   last_movement_extruder,  // Last movement extruder, as computed when the last movement was fetched from planner
+                   axis_did_move;           // Last Movement in the given direction is not null, as computed when the last movement was fetched from planner
+    static bool abort_current_block;        // Signals to the stepper that current block should be aborted
 
     #if ENABLED(X_DUAL_ENDSTOPS)
       static bool locked_x_motor, locked_x2_motor;
@@ -94,7 +94,7 @@ class Stepper {
     static int32_t counter_X, counter_Y, counter_Z, counter_E;
     static uint32_t step_events_completed; // The number of step events executed in the current block
 
-    #if ENABLED(BEZIER_JERK_CONTROL)
+    #if ENABLED(S_CURVE_ACCELERATION)
       static int32_t bezier_A,     // A coefficient in Bézier speed curve
                      bezier_B,     // B coefficient in Bézier speed curve
                      bezier_C;     // C coefficient in Bézier speed curve
@@ -128,7 +128,7 @@ class Stepper {
     static uint8_t step_loops, step_loops_nominal;
 
     static uint32_t ticks_nominal;
-    #if DISABLED(BEZIER_JERK_CONTROL)
+    #if DISABLED(S_CURVE_ACCELERATION)
       static uint32_t acc_step_rate; // needed for deceleration start point
     #endif
 
@@ -198,7 +198,7 @@ class Stepper {
     FORCE_INLINE static bool motor_direction(const AxisEnum axis) { return TEST(last_direction_bits, axis); }
 
     // The last movement direction was not null on the specified axis. Note that motor direction is not necessarily the same.
-    FORCE_INLINE static bool movement_non_null(const AxisEnum axis) { return last_movement_non_null[axis]; }
+    FORCE_INLINE static bool axis_is_moving(const AxisEnum axis) { return TEST(axis_did_move, axis); }
 
     // The extruder associated to the last movement
     FORCE_INLINE static uint8_t movement_extruder() { return last_movement_extruder; }
@@ -326,15 +326,14 @@ class Stepper {
         }
         if (timer < 100) { // (20kHz - this should never happen)
           timer = 100;
-          SERIAL_ECHOPGM(MSG_STEPPER_TOO_HIGH);
-          SERIAL_ECHOLN(step_rate);
+          SERIAL_ECHOLNPAIR(MSG_STEPPER_TOO_HIGH, step_rate);
         }
       #endif
 
       return timer;
     }
 
-    #if ENABLED(BEZIER_JERK_CONTROL)
+    #if ENABLED(S_CURVE_ACCELERATION)
       static void _calc_bezier_curve_coeffs(const int32_t v0, const int32_t v1, const uint32_t av);
       static int32_t _eval_bezier_curve(const uint32_t curr_step);
     #endif
