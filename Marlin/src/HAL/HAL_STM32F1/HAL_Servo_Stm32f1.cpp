@@ -39,9 +39,11 @@ int8_t libServo::attach(const int pin, const int min, const int max) {
 }
 
 void libServo::move(const int value) {
+  constexpr uint16_t servo_delay[] = SERVO_DELAY;
+  static_assert(COUNT(servo_delay) == NUM_SERVOS, "SERVO_DELAY must be an array NUM_SERVOS long.");
   if (this->attach(0) >= 0) {
     this->write(value);
-    safe_delay(this->servo_delay[this->servoIndex]);
+    safe_delay(servo_delay[this->servoIndex]);
     #if ENABLED(DEACTIVATE_SERVOS_AFTER_MOVE)
       this->detach();
     #endif
