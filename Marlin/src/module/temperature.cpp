@@ -54,10 +54,10 @@
 #if HOTEND_USES_THERMISTOR
   #if ENABLED(TEMP_SENSOR_1_AS_REDUNDANT)
     static void* heater_ttbl_map[2] = { (void*)HEATER_0_TEMPTABLE, (void*)HEATER_1_TEMPTABLE };
-    static uint8_t heater_ttbllen_map[2] = { HEATER_0_TEMPTABLE_LEN, HEATER_1_TEMPTABLE_LEN };
+    static constexpr uint8_t heater_ttbllen_map[2] = { HEATER_0_TEMPTABLE_LEN, HEATER_1_TEMPTABLE_LEN };
   #else
     static void* heater_ttbl_map[HOTENDS] = ARRAY_BY_HOTENDS((void*)HEATER_0_TEMPTABLE, (void*)HEATER_1_TEMPTABLE, (void*)HEATER_2_TEMPTABLE, (void*)HEATER_3_TEMPTABLE, (void*)HEATER_4_TEMPTABLE);
-    static uint8_t heater_ttbllen_map[HOTENDS] = ARRAY_BY_HOTENDS(HEATER_0_TEMPTABLE_LEN, HEATER_1_TEMPTABLE_LEN, HEATER_2_TEMPTABLE_LEN, HEATER_3_TEMPTABLE_LEN, HEATER_4_TEMPTABLE_LEN);
+    static constexpr uint8_t heater_ttbllen_map[HOTENDS] = ARRAY_BY_HOTENDS(HEATER_0_TEMPTABLE_LEN, HEATER_1_TEMPTABLE_LEN, HEATER_2_TEMPTABLE_LEN, HEATER_3_TEMPTABLE_LEN, HEATER_4_TEMPTABLE_LEN);
   #endif
 #endif
 
@@ -1234,14 +1234,7 @@ void Temperature::init() {
     HAL_ANALOG_SELECT(FILWIDTH_PIN);
   #endif
 
-  // todo: HAL: fix abstraction
-  #ifdef __AVR__
-    // Use timer0 for temperature measurement
-    // Interleave temperature interrupt with millies interrupt
-    OCR0B = 128;
-  #else
-    HAL_timer_start(TEMP_TIMER_NUM, TEMP_TIMER_FREQUENCY);
-  #endif
+  HAL_timer_start(TEMP_TIMER_NUM, TEMP_TIMER_FREQUENCY);
   ENABLE_TEMPERATURE_INTERRUPT();
 
   #if HAS_AUTO_FAN_0
@@ -2075,7 +2068,7 @@ void Temperature::isr() {
         HAL_START_ADC(TEMP_CHAMBER_PIN);
         break;
       case MeasureTemp_CHAMBER:
-        raw_temp_chamber_value += ADC;
+        raw_temp_chamber_value += HAL_READ_ADC;
         break;
     #endif
 
@@ -2133,7 +2126,7 @@ void Temperature::isr() {
         break;
       case Measure_ADC_KEY:
         if (ADCKey_count < 16) {
-          raw_ADCKey_value = ADC;
+          raw_ADCKey_value = HAL_READ_ADC;
           if (raw_ADCKey_value > 900) {
             //ADC Key release
             ADCKey_count = 0;

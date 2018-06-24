@@ -273,6 +273,7 @@
  *
  * Temperature sensors available:
  *
+ *    -4 : thermocouple with AD8495
  *    -3 : thermocouple with MAX31855 (only for sensor 0)
  *    -2 : thermocouple with MAX6675 (only for sensor 0)
  *    -1 : thermocouple with AD595
@@ -971,9 +972,6 @@
 #define INVERT_Y_DIR false
 #define INVERT_Z_DIR false
 
-// Enable this option for Toshiba stepper drivers
-//#define CONFIG_STEPPERS_TOSHIBA
-
 // @section extruder
 
 // For direct drive extruder v9 set to true, for geared extruder set to false.
@@ -1401,7 +1399,7 @@
 
 #if ENABLED(NOZZLE_PARK_FEATURE)
   // Specify a park position as { X, Y, Z }
-  #define NOZZLE_PARK_POINT { (X_MIN_POS + 10), (Y_MAX_POS - 10), 20 }
+  #define NOZZLE_PARK_POINT { (X_MIN_POS + 10), 0, 20 }
   #define NOZZLE_PARK_XY_FEEDRATE 100   // X and Y axes feedrate in mm/s (also used for delta printers Z axis)
   #define NOZZLE_PARK_Z_FEEDRATE 5      // Z axis feedrate in mm/s (not used for delta printers)
 #endif
