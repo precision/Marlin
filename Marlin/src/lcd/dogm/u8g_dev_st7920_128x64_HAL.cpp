@@ -55,7 +55,7 @@
 
 #include "../../inc/MarlinConfigPre.h"
 
-#if ENABLED(DOGLCD)
+#if HAS_GRAPHICAL_LCD
 
 #include <U8glib.h>
 
@@ -85,7 +85,7 @@ static const uint8_t u8g_dev_st7920_128x64_HAL_init_seq[] PROGMEM = {
   U8G_ESC_END         // end of sequence
 };
 
-void clear_graphics_DRAM(u8g_t *u8g, u8g_dev_t *dev){
+void clear_graphics_DRAM(u8g_t *u8g, u8g_dev_t *dev) {
   u8g_SetChipSelect(u8g, dev, 1);
   u8g_Delay(1);
   u8g_SetAddress(u8g, dev, 0);         // cmd mode
@@ -209,4 +209,4 @@ u8g_dev_t u8g_dev_st7920_128x64_HAL_4x_hw_spi = { u8g_dev_st7920_128x64_HAL_4x_f
   u8g_dev_t u8g_dev_st7920_128x64_rrd_sw_spi = { u8g_dev_st7920_128x64_HAL_4x_fn, &u8g_dev_st7920_128x64_HAL_4x_pb, U8G_COM_ST7920_HAL_SW_SPI };
 #endif
 
-#endif // DOGLCD
+#endif // HAS_GRAPHICAL_LCD

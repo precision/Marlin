@@ -29,7 +29,7 @@
 
 #if !(defined(U8G_HAL_LINKS) || defined(__SAM3X8E__))
 
-#include "../../HAL/Delay.h"
+#include "../../HAL/shared/Delay.h"
 
 #define ST7920_CLK_PIN  LCD_PINS_D4
 #define ST7920_DAT_PIN  LCD_PINS_ENABLE
@@ -60,7 +60,7 @@
   #define CPU_ST7920_DELAY_1 DELAY_NS(0)
   #define CPU_ST7920_DELAY_2 DELAY_NS(188)
   #define CPU_ST7920_DELAY_3 DELAY_NS(0)
-#elif MB(MINIRAMBO)
+#elif MB(MINIRAMBO) || MB(EINSY_RAMBO) || MB(EINSY_RETRO)
   #define CPU_ST7920_DELAY_1 DELAY_NS(0)
   #define CPU_ST7920_DELAY_2 DELAY_NS(250)
   #define CPU_ST7920_DELAY_3 DELAY_NS(0)
@@ -72,12 +72,16 @@
   #define CPU_ST7920_DELAY_1 DELAY_NS(0)
   #define CPU_ST7920_DELAY_2 DELAY_NS(0)
   #define CPU_ST7920_DELAY_3 DELAY_NS(189)
+#elif defined(ARDUINO_ARCH_STM32)
+  #define CPU_ST7920_DELAY_1 DELAY_NS(300)
+  #define CPU_ST7920_DELAY_2 DELAY_NS(40)
+  #define CPU_ST7920_DELAY_3 DELAY_NS(340)
 #elif F_CPU == 16000000
   #define CPU_ST7920_DELAY_1 DELAY_NS(0)
   #define CPU_ST7920_DELAY_2 DELAY_NS(0)
   #define CPU_ST7920_DELAY_3 DELAY_NS(63)
 #else
-  #error "No valid condition for delays in 'ultralcd_st7920_u8glib_rrd.h'"
+  #error "No valid condition for delays in 'ultralcd_st7920_u8glib_rrd_AVR.h'"
 #endif
 
 #ifndef ST7920_DELAY_1

@@ -20,9 +20,8 @@
  */
 
 /**
- * HAL for Arduino Due and compatible (SAM3X8E)
  *
- * For ARDUINO_ARCH_SAM
+ * HAL For LPC1768
  */
 
 #ifndef _HAL_TIMERS_H
@@ -125,11 +124,6 @@ FORCE_INLINE static hal_timer_t HAL_timer_get_count(const uint8_t timer_num) {
     case 1: return TEMP_TIMER->TC; //    Temp Timer Count
   }
   return 0;
-}
-
-FORCE_INLINE static void HAL_timer_restrain(const uint8_t timer_num, const uint16_t interval_ticks) {
-  const hal_timer_t mincmp = HAL_timer_get_count(timer_num) + interval_ticks;
-  if (HAL_timer_get_compare(timer_num) < mincmp) HAL_timer_set_compare(timer_num, mincmp);
 }
 
 FORCE_INLINE static void HAL_timer_enable_interrupt(const uint8_t timer_num) {

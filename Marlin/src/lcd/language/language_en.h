@@ -61,6 +61,12 @@
 #ifndef MSG_MAIN
   #define MSG_MAIN                            _UxGT("Main")
 #endif
+#ifndef MSG_ADVANCED_SETTINGS
+  #define MSG_ADVANCED_SETTINGS               _UxGT("Advanced Settings")
+#endif
+#ifndef MSG_CONFIGURATION
+  #define MSG_CONFIGURATION                   _UxGT("Configuration")
+#endif
 #ifndef MSG_AUTOSTART
   #define MSG_AUTOSTART                       _UxGT("Autostart")
 #endif
@@ -84,6 +90,9 @@
 #endif
 #ifndef MSG_AUTO_HOME_Z
   #define MSG_AUTO_HOME_Z                     _UxGT("Home Z")
+#endif
+#ifndef MSG_AUTO_Z_ALIGN
+  #define MSG_AUTO_Z_ALIGN                    _UxGT("Auto Z-Align")
 #endif
 #ifndef MSG_TMC_Z_CALIBRATION
   #define MSG_TMC_Z_CALIBRATION               _UxGT("Calibrate Z")
@@ -113,7 +122,7 @@
   #define MSG_SET_ORIGIN                      _UxGT("Set origin")
 #endif
 #ifndef MSG_PREHEAT_1
-  #define MSG_PREHEAT_1                       _UxGT("Preheat PLA")
+  #define MSG_PREHEAT_1                       _UxGT("Preheat " PREHEAT_1_LABEL)
 #endif
 #ifndef MSG_PREHEAT_1_N
   #define MSG_PREHEAT_1_N                     MSG_PREHEAT_1 _UxGT(" ")
@@ -131,7 +140,7 @@
   #define MSG_PREHEAT_1_SETTINGS              MSG_PREHEAT_1 _UxGT(" conf")
 #endif
 #ifndef MSG_PREHEAT_2
-  #define MSG_PREHEAT_2                       _UxGT("Preheat ABS")
+  #define MSG_PREHEAT_2                       _UxGT("Preheat " PREHEAT_2_LABEL)
 #endif
 #ifndef MSG_PREHEAT_2_N
   #define MSG_PREHEAT_2_N                     MSG_PREHEAT_2 _UxGT(" ")
@@ -147,6 +156,9 @@
 #endif
 #ifndef MSG_PREHEAT_2_SETTINGS
   #define MSG_PREHEAT_2_SETTINGS              MSG_PREHEAT_2 _UxGT(" conf")
+#endif
+#ifndef MSG_PREHEAT_CUSTOM
+  #define MSG_PREHEAT_CUSTOM                  _UxGT("Preheat Custom")
 #endif
 #ifndef MSG_COOLDOWN
   #define MSG_COOLDOWN                        _UxGT("Cooldown")
@@ -196,6 +208,33 @@
 #ifndef MSG_UBL_LEVEL_BED
   #define MSG_UBL_LEVEL_BED                   _UxGT("Unified Bed Leveling")
 #endif
+#ifndef MSG_IDEX_MENU
+  #define MSG_IDEX_MENU                       _UxGT("IDEX Mode")
+#endif
+#ifndef MSG_IDEX_MODE_AUTOPARK
+  #define MSG_IDEX_MODE_AUTOPARK              _UxGT("Auto-Park")
+#endif
+#ifndef MSG_IDEX_MODE_DUPLICATE
+  #define MSG_IDEX_MODE_DUPLICATE             _UxGT("Duplication")
+#endif
+#ifndef MSG_IDEX_MODE_SCALED_COPY
+  #define MSG_IDEX_MODE_SCALED_COPY           _UxGT("Scaled copy")
+#endif
+#ifndef MSG_IDEX_MODE_FULL_CTRL
+  #define MSG_IDEX_MODE_FULL_CTRL             _UxGT("Full control")
+#endif
+#ifndef MSG_IDEX_X_OFFSET
+  #define MSG_IDEX_X_OFFSET                   _UxGT("2nd nozzle X")
+#endif
+#ifndef MSG_IDEX_Y_OFFSET
+  #define MSG_IDEX_Y_OFFSET                   _UxGT("2nd nozzle Y")
+#endif
+#ifndef MSG_IDEX_Z_OFFSET
+  #define MSG_IDEX_Z_OFFSET                   _UxGT("2nd nozzle Z")
+#endif
+#ifndef MSG_IDEX_SAVE_OFFSETS
+  #define MSG_IDEX_SAVE_OFFSETS               _UxGT("Save Offsets")
+#endif
 #ifndef MSG_UBL_MANUAL_MESH
   #define MSG_UBL_MANUAL_MESH                 _UxGT("Manually Build Mesh")
 #endif
@@ -217,17 +256,17 @@
 #ifndef MSG_UBL_DEACTIVATE_MESH
   #define MSG_UBL_DEACTIVATE_MESH             _UxGT("Deactivate UBL")
 #endif
-#ifndef MSG_UBL_SET_BED_TEMP
-  #define MSG_UBL_SET_BED_TEMP                _UxGT("Bed Temp")
+#ifndef MSG_UBL_SET_TEMP_BED
+  #define MSG_UBL_SET_TEMP_BED                _UxGT("Bed Temp")
 #endif
-#ifndef MSG_UBL_CUSTOM_BED_TEMP
-  #define MSG_UBL_CUSTOM_BED_TEMP             MSG_UBL_SET_BED_TEMP
+#ifndef MSG_UBL_BED_TEMP_CUSTOM
+  #define MSG_UBL_BED_TEMP_CUSTOM             MSG_UBL_SET_TEMP_BED
 #endif
-#ifndef MSG_UBL_SET_HOTEND_TEMP
-  #define MSG_UBL_SET_HOTEND_TEMP             _UxGT("Hotend Temp")
+#ifndef MSG_UBL_SET_TEMP_HOTEND
+  #define MSG_UBL_SET_TEMP_HOTEND             _UxGT("Hotend Temp")
 #endif
-#ifndef MSG_UBL_CUSTOM_HOTEND_TEMP
-  #define MSG_UBL_CUSTOM_HOTEND_TEMP          MSG_UBL_SET_HOTEND_TEMP
+#ifndef MSG_UBL_HOTEND_TEMP_CUSTOM
+  #define MSG_UBL_HOTEND_TEMP_CUSTOM          MSG_UBL_SET_TEMP_HOTEND
 #endif
 #ifndef MSG_UBL_MESH_EDIT
   #define MSG_UBL_MESH_EDIT                   _UxGT("Mesh Edit")
@@ -247,11 +286,11 @@
 #ifndef MSG_UBL_BUILD_MESH_MENU
   #define MSG_UBL_BUILD_MESH_MENU             _UxGT("Build Mesh")
 #endif
-#ifndef MSG_UBL_BUILD_PLA_MESH
-  #define MSG_UBL_BUILD_PLA_MESH              _UxGT("Build PLA Mesh")
+#ifndef MSG_UBL_BUILD_MESH_M1
+  #define MSG_UBL_BUILD_MESH_M1               _UxGT("Build Mesh (" PREHEAT_1_LABEL ")")
 #endif
-#ifndef MSG_UBL_BUILD_ABS_MESH
-  #define MSG_UBL_BUILD_ABS_MESH              _UxGT("Build ABS Mesh")
+#ifndef MSG_UBL_BUILD_MESH_M2
+  #define MSG_UBL_BUILD_MESH_M2               _UxGT("Build Mesh (" PREHEAT_2_LABEL ")")
 #endif
 #ifndef MSG_UBL_BUILD_COLD_MESH
   #define MSG_UBL_BUILD_COLD_MESH             _UxGT("Build Cold Mesh")
@@ -265,11 +304,11 @@
 #ifndef MSG_UBL_VALIDATE_MESH_MENU
   #define MSG_UBL_VALIDATE_MESH_MENU          _UxGT("Validate Mesh")
 #endif
-#ifndef MSG_UBL_VALIDATE_PLA_MESH
-  #define MSG_UBL_VALIDATE_PLA_MESH           _UxGT("Validate PLA Mesh")
+#ifndef MSG_UBL_VALIDATE_MESH_M1
+  #define MSG_UBL_VALIDATE_MESH_M1            _UxGT("Validate Mesh (" PREHEAT_1_LABEL ")")
 #endif
-#ifndef MSG_UBL_VALIDATE_ABS_MESH
-  #define MSG_UBL_VALIDATE_ABS_MESH           _UxGT("Validate ABS Mesh")
+#ifndef MSG_UBL_VALIDATE_MESH_M2
+  #define MSG_UBL_VALIDATE_MESH_M2            _UxGT("Validate Mesh (" PREHEAT_2_LABEL ")")
 #endif
 #ifndef MSG_UBL_VALIDATE_CUSTOM_MESH
   #define MSG_UBL_VALIDATE_CUSTOM_MESH        _UxGT("Validate Custom Mesh")
@@ -444,6 +483,9 @@
 #ifndef MSG_MOVE_E
   #define MSG_MOVE_E                          _UxGT("Extruder")
 #endif
+#ifndef MSG_HOTEND_TOO_COLD
+  #define MSG_HOTEND_TOO_COLD                 _UxGT("Hotend too cold")
+#endif
 #ifndef MSG_MOVE_01MM
   #define MSG_MOVE_01MM                       _UxGT("Move 0.1mm")
 #endif
@@ -609,6 +651,9 @@
 #ifndef MSG_E5STEPS
   #define MSG_E5STEPS                         _UxGT("E5steps/mm")
 #endif
+#ifndef MSG_E6STEPS
+  #define MSG_E6STEPS                         _UxGT("E6steps/mm")
+#endif
 #ifndef MSG_TEMPERATURE
   #define MSG_TEMPERATURE                     _UxGT("Temperature")
 #endif
@@ -647,6 +692,12 @@
 #endif
 #ifndef MSG_INIT_EEPROM
   #define MSG_INIT_EEPROM                     _UxGT("Initialize EEPROM")
+#endif
+#ifndef MSG_SD_UPDATE
+  #define MSG_SD_UPDATE                       _UxGT("SD Update")
+#endif
+#ifndef MSG_RESET_PRINTER
+  #define MSG_RESET_PRINTER                   _UxGT("Reset Printer")
 #endif
 #ifndef MSG_REFRESH
   #define MSG_REFRESH                         _UxGT("Refresh")
@@ -711,8 +762,8 @@
 #ifndef MSG_CONTROL_RETRACTF
   #define MSG_CONTROL_RETRACTF                _UxGT("Retract  V")
 #endif
-#ifndef MSG_CONTROL_RETRACT_ZLIFT
-  #define MSG_CONTROL_RETRACT_ZLIFT           _UxGT("Hop mm")
+#ifndef MSG_CONTROL_RETRACT_ZHOP
+  #define MSG_CONTROL_RETRACT_ZHOP            _UxGT("Hop mm")
 #endif
 #ifndef MSG_CONTROL_RETRACT_RECOVER
   #define MSG_CONTROL_RETRACT_RECOVER         _UxGT("UnRet mm")
@@ -729,6 +780,21 @@
 #ifndef MSG_AUTORETRACT
   #define MSG_AUTORETRACT                     _UxGT("AutoRetr.")
 #endif
+#ifndef MSG_FILAMENT_SWAP_LENGTH
+  #define MSG_FILAMENT_SWAP_LENGTH            _UxGT("Retract Distance")
+#endif
+#ifndef MSG_TOOL_CHANGE
+  #define MSG_TOOL_CHANGE                      _UxGT("Tool Change")
+#endif
+#ifndef MSG_TOOL_CHANGE_ZLIFT
+  #define MSG_TOOL_CHANGE_ZLIFT                _UxGT("Z Raise")
+#endif
+#ifndef MSG_SINGLENOZZLE_PRIME_SPD
+  #define MSG_SINGLENOZZLE_PRIME_SPD          _UxGT("Prime Speed")
+#endif
+#ifndef MSG_SINGLENOZZLE_RETRACT_SPD
+  #define MSG_SINGLENOZZLE_RETRACT_SPD        _UxGT("Retract Speed")
+#endif
 #ifndef MSG_FILAMENTCHANGE
   #define MSG_FILAMENTCHANGE                  _UxGT("Change filament")
 #endif
@@ -744,8 +810,8 @@
 #ifndef MSG_INIT_SDCARD
   #define MSG_INIT_SDCARD                     _UxGT("Init. SD card")
 #endif
-#ifndef MSG_CNG_SDCARD
-  #define MSG_CNG_SDCARD                      _UxGT("Change SD card")
+#ifndef MSG_CHANGE_SDCARD
+  #define MSG_CHANGE_SDCARD                   _UxGT("Change SD card")
 #endif
 #ifndef MSG_ZPROBE_OUT
   #define MSG_ZPROBE_OUT                      _UxGT("Z Probe past bed")
@@ -767,6 +833,12 @@
 #endif
 #ifndef MSG_BLTOUCH_STOW
   #define MSG_BLTOUCH_STOW                    _UxGT("Stow BLTouch")
+#endif
+#ifndef MSG_MANUAL_DEPLOY
+  #define MSG_MANUAL_DEPLOY                   _UxGT("Deploy Z-Probe")
+#endif
+#ifndef MSG_MANUAL_STOW
+  #define MSG_MANUAL_STOW                     _UxGT("Stow Z-Probe")
 #endif
 #ifndef MSG_HOME
   #define MSG_HOME                            _UxGT("Home") // Used as MSG_HOME " " MSG_X MSG_Y MSG_Z " " MSG_FIRST
@@ -925,7 +997,7 @@
   #define MSG_CASE_LIGHT                      _UxGT("Case light")
 #endif
 #ifndef MSG_CASE_LIGHT_BRIGHTNESS
-  #define MSG_CASE_LIGHT_BRIGHTNESS           _UxGT("Light BRIGHTNESS")
+  #define MSG_CASE_LIGHT_BRIGHTNESS           _UxGT("Light Brightness")
 #endif
 #if LCD_WIDTH >= 20
   #ifndef MSG_INFO_PRINT_COUNT
@@ -999,6 +1071,9 @@
 #ifndef MSG_FILAMENT_CHANGE_NOZZLE
   #define MSG_FILAMENT_CHANGE_NOZZLE          _UxGT("  Nozzle: ")
 #endif
+#ifndef MSG_RUNOUT_SENSOR_ENABLE
+  #define MSG_RUNOUT_SENSOR_ENABLE            _UxGT("Runout Sensor")
+#endif
 #ifndef MSG_ERR_HOMING_FAILED
   #define MSG_ERR_HOMING_FAILED               _UxGT("Homing failed")
 #endif
@@ -1057,6 +1132,9 @@
   #endif
   #ifndef MSG_FILAMENT_CHANGE_INSERT_1
     #define MSG_FILAMENT_CHANGE_INSERT_1        _UxGT("Insert and Click")
+  #endif
+  #ifndef MSG_FILAMENT_CHANGE_HEAT_1
+    #define MSG_FILAMENT_CHANGE_HEAT_1          _UxGT("Click to heat")
   #endif
   #ifndef MSG_FILAMENT_CHANGE_HEATING_1
     #define MSG_FILAMENT_CHANGE_HEATING_1       _UxGT("Heating...")
