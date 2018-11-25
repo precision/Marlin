@@ -191,9 +191,9 @@ volatile bool wait_for_heatup = true;
 millis_t max_inactive_time, // = 0
          stepper_inactive_time = (DEFAULT_STEPPER_DEACTIVE_TIME) * 1000UL;
 
-#ifdef CHDK
-  millis_t chdkHigh; // = 0;
-  bool chdkActive; // = false;
+#if PIN_EXISTS(CHDK)
+  extern bool chdk_active;
+  extern millis_t chdk_timeout;
 #endif
 
 #if ENABLED(I2C_POSITION_ENCODERS)
@@ -323,7 +323,7 @@ void disable_all_steppers() {
  *  - Keep the command buffer full
  *  - Check for maximum inactive time between commands
  *  - Check for maximum inactive time between stepper commands
- *  - Check if pin CHDK needs to go LOW
+ *  - Check if CHDK_PIN needs to go LOW
  *  - Check for KILL button held down
  *  - Check for HOME button held down
  *  - Check if cooling fan needs to be switched on
@@ -369,15 +369,18 @@ void manage_inactivity(const bool ignore_stepper_queue/*=false*/) {
         disable_e_steppers();
       #endif
       #if HAS_LCD_MENU && ENABLED(AUTO_BED_LEVELING_UBL)
-        if (ubl.lcd_map_control) ubl.lcd_map_control = defer_return_to_status = false;
+        if (ubl.lcd_map_control) {
+          ubl.lcd_map_control = false;
+          ui.defer_status_screen(false);
+        }
       #endif
     }
   }
 
-  #ifdef CHDK // Check if pin should be set to LOW after M240 set it to HIGH
-    if (chdkActive && ELAPSED(ms, chdkHigh + CHDK_DELAY)) {
-      chdkActive = false;
-      WRITE(CHDK, LOW);
+  #if PIN_EXISTS(CHDK) // Check if pin should be set to LOW (after M240 set it HIGH)
+    if (chdk_active && ELAPSED(ms, chdk_timeout)) {
+      chdk_active = false;
+      WRITE(CHDK_PIN, LOW);
     }
   #endif
 
@@ -546,7 +549,7 @@ void idle(
     max7219.idle_tasks();
   #endif
 
-  lcd_update();
+  ui.update();
 
   #if ENABLED(HOST_KEEPALIVE_FEATURE)
     gcode.host_keepalive();
@@ -606,8 +609,8 @@ void kill(PGM_P const lcd_msg/*=NULL*/) {
   SERIAL_ERROR_START();
   SERIAL_ERRORLNPGM(MSG_ERR_KILLED);
 
-  #if ENABLED(ULTRA_LCD) || ENABLED(EXTENSIBLE_UI)
-    kill_screen(lcd_msg ? lcd_msg : PSTR(MSG_KILLED));
+  #if HAS_SPI_LCD || ENABLED(EXTENSIBLE_UI)
+    ui.kill_screen(lcd_msg ? lcd_msg : PSTR(MSG_KILLED));
   #else
     UNUSED(lcd_msg);
   #endif
@@ -896,11 +899,11 @@ void setup() {
     fanmux_init();
   #endif
 
-  lcd_init();
-  lcd_reset_status();
+  ui.init();
+  ui.reset_status();
 
   #if ENABLED(SHOW_BOOTSCREEN)
-    lcd_bootscreen();
+    ui.show_bootscreen();
   #endif
 
   #if ENABLED(MIXING_EXTRUDER)
@@ -921,11 +924,11 @@ void setup() {
   #endif
 
   #if DO_SWITCH_EXTRUDER
-    move_extruder_servo(0);  // Initialize extruder servo
+    move_extruder_servo(0);   // Initialize extruder servo
   #endif
 
   #if ENABLED(SWITCHING_NOZZLE)
-    move_nozzle_servo(0);  // Initialize nozzle servo
+    move_nozzle_servo(0);     // Initialize nozzle servo
   #endif
 
   #if ENABLED(PARKING_EXTRUDER)
@@ -933,11 +936,11 @@ void setup() {
   #endif
 
   #if ENABLED(POWER_LOSS_RECOVERY)
-    check_print_job_recovery();
+    recovery.check();
   #endif
 
-  #if ENABLED(USE_WATCHDOG) // Reinit watchdog after HAL_get_reset_source call
-    watchdog_init();
+  #if ENABLED(USE_WATCHDOG)
+    watchdog_init();          // Reinit watchdog after HAL_get_reset_source call
   #endif
 
   #if ENABLED(EXTERNAL_CLOSED_LOOP_CONTROLLER)
@@ -964,7 +967,7 @@ void loop() {
     #if ENABLED(SDSUPPORT)
       card.checkautostart();
 
-      if (card.abort_sd_printing) {
+      if (card.flag.abort_sd_printing) {
         card.stopSDPrint(
           #if SD_RESORT
             true

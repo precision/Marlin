@@ -370,14 +370,15 @@ FORCE_INLINE void probe_specific_action(const bool deploy) {
     BUZZ(100, 698);
 
     PGM_P const ds_str = deploy ? PSTR(MSG_MANUAL_DEPLOY) : PSTR(MSG_MANUAL_STOW);
-    lcd_setstatusPGM(ds_str);
+    ui.return_to_status();       // To display the new status message
+    ui.set_status_P(ds_str, 99);
     serialprintPGM(ds_str);
     SERIAL_EOL();
 
     KEEPALIVE_STATE(PAUSED_FOR_USER);
     wait_for_user = true;
     while (wait_for_user) idle();
-    lcd_reset_status();
+    ui.reset_status();
     KEEPALIVE_STATE(IN_HANDLER);
 
   #endif // PAUSE_BEFORE_DEPLOY_STOW
@@ -403,6 +404,10 @@ FORCE_INLINE void probe_specific_action(const bool deploy) {
   #elif ENABLED(RACK_AND_PINION_PROBE)
 
     do_blocking_move_to_x(deploy ? Z_PROBE_DEPLOY_X : Z_PROBE_RETRACT_X);
+
+  #elif DISABLED(PAUSE_BEFORE_DEPLOY_STOW)
+
+    UNUSED(deploy);
 
   #endif
 }
@@ -525,8 +530,8 @@ static bool do_probe_move(const float z, const float fr_mm_s) {
     if (thermalManager.isHeatingBed()) {
       serialprintPGM(msg_wait_for_bed_heating);
       LCD_MESSAGEPGM(MSG_BED_HEATING);
-      while (thermalManager.isHeatingBed()) safe_delay(200);
-      lcd_reset_status();
+      thermalManager.wait_for_bed();
+      ui.reset_status();
     }
   #endif
 
@@ -542,15 +547,14 @@ static bool do_probe_move(const float z, const float fr_mm_s) {
       tmc_stallguard(stepperY);
     #endif
     tmc_stallguard(stepperZ);
+    endstops.enable(true);
   #endif
 
   #if QUIET_PROBING
     probing_pause(true);
   #endif
 
-  endstops.enable(true);
-
-  // Move down until probe triggered
+  // Move down until the probe is triggered
   do_blocking_move_to_z(z, fr_mm_s);
 
   // Check to see if the probe was triggered
@@ -574,6 +578,7 @@ static bool do_probe_move(const float z, const float fr_mm_s) {
 
   // Re-enable stealthChop if used. Disable diag1 pin on driver.
   #if ENABLED(SENSORLESS_PROBING)
+    endstops.not_homing();
     #if ENABLED(DELTA)
       tmc_stallguard(stepperX, false);
       tmc_stallguard(stepperY, false);

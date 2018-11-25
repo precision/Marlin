@@ -19,14 +19,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+#pragma once
 
 /**
  * Conditionals_post.h
  * Defines that depend on configuration but are not editable.
  */
-
-#ifndef CONDITIONALS_POST_H
-#define CONDITIONALS_POST_H
 
 #define AVR_ATmega2560_FAMILY_PLUS_70 ( \
      MB(BQ_ZUM_MEGA_3D)                 \
@@ -44,10 +42,6 @@
   #undef NOT_A_PIN    // Override Teensyduino legacy CapSense define work-around
   #define NOT_A_PIN 0 // For PINS_DEBUGGING
 #endif
-
-#define IS_SCARA (ENABLED(MORGAN_SCARA) || ENABLED(MAKERARM_SCARA))
-#define IS_KINEMATIC (ENABLED(DELTA) || IS_SCARA)
-#define IS_CARTESIAN !IS_KINEMATIC
 
 #define HAS_CLASSIC_JERK (IS_KINEMATIC || DISABLED(JUNCTION_DEVIATION))
 
@@ -281,12 +275,12 @@
 #elif TEMP_SENSOR_0 == -3
   #define HEATER_0_USES_MAX6675
   #define MAX6675_IS_MAX31855
-  #define MAX6675_TMIN -270
-  #define MAX6675_TMAX 1800
+  #define HEATER_0_MAX6675_TMIN -270
+  #define HEATER_0_MAX6675_TMAX 1800
 #elif TEMP_SENSOR_0 == -2
   #define HEATER_0_USES_MAX6675
-  #define MAX6675_TMIN 0
-  #define MAX6675_TMAX 1024
+  #define HEATER_0_MAX6675_TMIN 0
+  #define HEATER_0_MAX6675_TMAX 1024
 #elif TEMP_SENSOR_0 == -1
   #define HEATER_0_USES_AD595
 #elif TEMP_SENSOR_0 == 0
@@ -300,9 +294,19 @@
 #if TEMP_SENSOR_1 == -4
   #define HEATER_1_USES_AD8495
 #elif TEMP_SENSOR_1 == -3
-  #error "MAX31855 Thermocouples (-3) not supported for TEMP_SENSOR_1."
+  #if TEMP_SENSOR_0 == -2
+    #error "If MAX31855 Thermocouple (-3) is used for TEMP_SENSOR_1 then TEMP_SENSOR_0 must match."
+  #endif
+  #define HEATER_1_USES_MAX6675
+  #define HEATER_1_MAX6675_TMIN -270
+  #define HEATER_1_MAX6675_TMAX 1800
 #elif TEMP_SENSOR_1 == -2
-  #error "MAX6675 Thermocouples (-2) not supported for TEMP_SENSOR_1."
+  #if TEMP_SENSOR_0 == -3
+    #error "If MAX31855 Thermocouple (-3) is used for TEMP_SENSOR_0 then TEMP_SENSOR_1 must match."
+  #endif
+  #define HEATER_1_USES_MAX6675
+  #define HEATER_1_MAX6675_TMIN 0
+  #define HEATER_1_MAX6675_TMAX 1024
 #elif TEMP_SENSOR_1 == -1
   #define HEATER_1_USES_AD595
 #elif TEMP_SENSOR_1 == 0
@@ -1527,19 +1531,18 @@
 // Updated G92 behavior shifts the workspace
 #define HAS_POSITION_SHIFT DISABLED(NO_WORKSPACE_OFFSETS)
 // The home offset also shifts the coordinate space
-#define HAS_HOME_OFFSET (DISABLED(NO_WORKSPACE_OFFSETS) && DISABLED(DELTA))
-// Either offset yields extra calculations on all moves
-#define HAS_WORKSPACE_OFFSET (HAS_POSITION_SHIFT || HAS_HOME_OFFSET)
-// M206 doesn't apply to DELTA
-#define HAS_M206_COMMAND (HAS_HOME_OFFSET && DISABLED(DELTA))
+#define HAS_HOME_OFFSET (DISABLED(NO_WORKSPACE_OFFSETS) && IS_CARTESIAN)
+// The SCARA home offset applies only on G28
+#define HAS_SCARA_OFFSET (DISABLED(NO_WORKSPACE_OFFSETS) && IS_SCARA)
+// Cumulative offset to workspace to save some calculation
+#define HAS_WORKSPACE_OFFSET (HAS_POSITION_SHIFT && HAS_HOME_OFFSET)
+// M206 sets the home offset for Cartesian machines
+#define HAS_M206_COMMAND (HAS_HOME_OFFSET && !IS_SCARA)
 
 // LCD timeout to status screen default is 15s
 #ifndef LCD_TIMEOUT_TO_STATUS
   #define LCD_TIMEOUT_TO_STATUS 15000
 #endif
-
-// Shorthand
-#define GRID_MAX_POINTS ((GRID_MAX_POINTS_X) * (GRID_MAX_POINTS_Y))
 
 // Add commands that need sub-codes to this list
 #define USE_GCODE_SUBCODES ENABLED(G38_PROBE_TARGET) || ENABLED(CNC_COORDINATE_SYSTEMS) || ENABLED(POWER_LOSS_RECOVERY)
@@ -1626,7 +1629,7 @@
 // If platform requires early initialization of watchdog to properly boot
 #define EARLY_WATCHDOG (ENABLED(USE_WATCHDOG) && defined(ARDUINO_ARCH_SAM))
 
-#define USE_EXECUTE_COMMANDS_IMMEDIATE ENABLED(G29_RETRY_AND_RECOVER)
+#define USE_EXECUTE_COMMANDS_IMMEDIATE (ENABLED(G29_RETRY_AND_RECOVER) || ENABLED(GCODE_MACROS) || ENABLED(POWER_LOSS_RECOVERY))
 
 #if ENABLED(Z_TRIPLE_STEPPER_DRIVERS)
   #define Z_STEPPER_COUNT 3
@@ -1636,4 +1639,26 @@
   #define Z_STEPPER_COUNT 1
 #endif
 
-#endif // CONDITIONALS_POST_H
+// Get LCD character width/height, which may be overridden by pins, configs, etc.
+#ifndef LCD_WIDTH
+  #if ENABLED(LIGHTWEIGHT_UI)
+    #define LCD_WIDTH 16
+  #elif HAS_GRAPHICAL_LCD
+    #define LCD_WIDTH 22
+  #elif ENABLED(ULTIPANEL)
+    #define LCD_WIDTH 20
+  #elif HAS_SPI_LCD
+    #define LCD_WIDTH 16
+  #endif
+#endif
+#ifndef LCD_HEIGHT
+  #if ENABLED(LIGHTWEIGHT_UI)
+    #define LCD_HEIGHT 4
+  #elif HAS_GRAPHICAL_LCD
+    #define LCD_HEIGHT 5
+  #elif ENABLED(ULTIPANEL)
+    #define LCD_HEIGHT 4
+  #elif HAS_SPI_LCD
+    #define LCD_HEIGHT 2
+  #endif
+#endif
