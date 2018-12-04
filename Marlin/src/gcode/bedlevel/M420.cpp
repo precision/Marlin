@@ -49,10 +49,33 @@
  * With mesh-based leveling only:
  *
  *   C         Center mesh on the mean of the lowest and highest
+ *
+ * With MARLIN_DEV_MODE:
+ *   S2        Create a simple random mesh and enable
  */
 void GcodeSuite::M420() {
-  const bool seen_S = parser.seen('S');
-  bool to_enable = seen_S ? parser.value_bool() : planner.leveling_active;
+  const bool seen_S = parser.seen('S'),
+             to_enable = seen_S ? parser.value_bool() : planner.leveling_active;
+
+  #if ENABLED(MARLIN_DEV_MODE)
+    if (parser.intval('S') == 2) {
+      #if ENABLED(AUTO_BED_LEVELING_BILINEAR)
+        bilinear_start[X_AXIS] = MIN_PROBE_X;
+        bilinear_start[Y_AXIS] = MIN_PROBE_Y;
+        bilinear_grid_spacing[X_AXIS] = (MAX_PROBE_X - (MIN_PROBE_X)) / (GRID_MAX_POINTS_X - 1);
+        bilinear_grid_spacing[Y_AXIS] = (MAX_PROBE_Y - (MIN_PROBE_Y)) / (GRID_MAX_POINTS_Y - 1);
+      #endif
+      for (uint8_t x = 0; x < GRID_MAX_POINTS_X; x++)
+        for (uint8_t y = 0; y < GRID_MAX_POINTS_Y; y++)
+          Z_VALUES(x, y) = 0.001 * random(-200, 200);
+      SERIAL_ECHOPGM("Simulated " STRINGIFY(GRID_MAX_POINTS_X) "x" STRINGIFY(GRID_MAX_POINTS_X) " mesh ");
+      SERIAL_ECHOPAIR(" (", MIN_PROBE_X);
+      SERIAL_CHAR(','); SERIAL_ECHO(MIN_PROBE_Y);
+      SERIAL_ECHOPAIR(")-(", MAX_PROBE_X);
+      SERIAL_CHAR(','); SERIAL_ECHO(MAX_PROBE_Y);
+      SERIAL_ECHOLNPGM(")");
+    }
+  #endif
 
   // If disabling leveling do it right away
   // (Don't disable for just M420 or M420 V)
@@ -72,13 +95,13 @@ void GcodeSuite::M420() {
         const int16_t a = settings.calc_num_meshes();
 
         if (!a) {
-          SERIAL_PROTOCOLLNPGM("?EEPROM storage not available.");
+          SERIAL_ECHOLNPGM("?EEPROM storage not available.");
           return;
         }
 
         if (!WITHIN(storage_slot, 0, a - 1)) {
-          SERIAL_PROTOCOLLNPGM("?Invalid storage slot.");
-          SERIAL_PROTOCOLLNPAIR("?Use 0 to ", a - 1);
+          SERIAL_ECHOLNPGM("?Invalid storage slot.");
+          SERIAL_ECHOLNPAIR("?Use 0 to ", a - 1);
           return;
         }
 
@@ -87,7 +110,7 @@ void GcodeSuite::M420() {
 
       #else
 
-        SERIAL_PROTOCOLLNPGM("?EEPROM storage not available.");
+        SERIAL_ECHOLNPGM("?EEPROM storage not available.");
         return;
 
       #endif
@@ -104,12 +127,6 @@ void GcodeSuite::M420() {
   #endif // AUTO_BED_LEVELING_UBL
 
   #if HAS_MESH
-
-    #if ENABLED(MESH_BED_LEVELING)
-      #define Z_VALUES(X,Y) mbl.z_values[X][Y]
-    #else
-      #define Z_VALUES(X,Y) z_values[X][Y]
-    #endif
 
     // Subtract the given value or the mean from all mesh values
     if (leveling_is_valid() && parser.seen('C')) {
@@ -189,13 +206,12 @@ void GcodeSuite::M420() {
   set_bed_leveling_enabled(to_enable);
 
   // Error if leveling failed to enable or reenable
-  if (to_enable && !planner.leveling_active) {
-    SERIAL_ERROR_START();
-    SERIAL_ERRORLNPGM(MSG_ERR_M420_FAILED);
-  }
+  if (to_enable && !planner.leveling_active)
+    SERIAL_ERROR_MSG(MSG_ERR_M420_FAILED);
 
   SERIAL_ECHO_START();
-  SERIAL_ECHOLNPAIR("Bed Leveling ", planner.leveling_active ? MSG_ON : MSG_OFF);
+  SERIAL_ECHOPGM("Bed Leveling ");
+  serialprintln_onoff(planner.leveling_active);
 
   #if ENABLED(ENABLE_LEVELING_FADE_HEIGHT)
     SERIAL_ECHO_START();

@@ -92,8 +92,7 @@
     // Disallow Z homing if X or Y are unknown
     if (!TEST(axis_known_position, X_AXIS) || !TEST(axis_known_position, Y_AXIS)) {
       LCD_MESSAGEPGM(MSG_ERR_Z_HOMING);
-      SERIAL_ECHO_START();
-      SERIAL_ECHOLNPGM(MSG_ERR_Z_HOMING);
+      SERIAL_ECHO_MSG(MSG_ERR_Z_HOMING);
       return;
     }
 
@@ -101,7 +100,7 @@
       if (DEBUGGING(LEVELING)) SERIAL_ECHOLNPGM("Z_SAFE_HOMING >>>");
     #endif
 
-    SYNC_PLAN_POSITION_KINEMATIC();
+    sync_plan_position();
 
     /**
      * Move the Z probe (or just the nozzle) to the safe homing point
@@ -135,8 +134,7 @@
     }
     else {
       LCD_MESSAGEPGM(MSG_ZPROBE_OUT);
-      SERIAL_ECHO_START();
-      SERIAL_ECHOLNPGM(MSG_ZPROBE_OUT);
+      SERIAL_ECHO_MSG(MSG_ZPROBE_OUT);
     }
 
     #if ENABLED(DEBUG_LEVELING_FEATURE)
@@ -174,10 +172,15 @@ void GcodeSuite::G28(const bool always_home_all) {
     }
   #endif
 
+  #if ENABLED(DUAL_X_CARRIAGE)
+    bool IDEX_saved_duplication_state = extruder_duplication_enabled;
+    DualXMode IDEX_saved_mode = dual_x_carriage_mode;
+  #endif
+
   #if ENABLED(MARLIN_DEV_MODE)
     if (parser.seen('S')) {
       LOOP_XYZ(a) set_axis_is_at_home((AxisEnum)a);
-      SYNC_PLAN_POSITION_KINEMATIC();
+      sync_plan_position();
       SERIAL_ECHOLNPGM("Simulated Homing");
       report_current_position();
       #if ENABLED(DEBUG_LEVELING_FEATURE)
@@ -187,26 +190,35 @@ void GcodeSuite::G28(const bool always_home_all) {
     }
   #endif
 
-  if (all_axes_known() && parser.boolval('O')) { // home only if needed
-    #if ENABLED(DEBUG_LEVELING_FEATURE)
-      if (DEBUGGING(LEVELING)) {
-        SERIAL_ECHOLNPGM("> homing not needed, skip");
-        SERIAL_ECHOLNPGM("<<< G28");
-      }
-    #endif
-    return;
+  if (parser.boolval('O')) {
+    if (
+      #if ENABLED(HOME_AFTER_DEACTIVATE)
+        all_axes_known()  // homing needed anytime steppers deactivate
+      #else
+        all_axes_homed()  // homing needed only if never homed
+      #endif
+    ) {
+      #if ENABLED(DEBUG_LEVELING_FEATURE)
+        if (DEBUGGING(LEVELING)) {
+          SERIAL_ECHOLNPGM("> homing not needed, skip");
+          SERIAL_ECHOLNPGM("<<< G28");
+        }
+      #endif
+      return;
+    }
   }
 
   // Wait for planner moves to finish!
   planner.synchronize();
 
-  // Cancel the active G29 session
-  #if ENABLED(PROBE_MANUALLY)
-    g29_in_progress = false;
-  #endif
-
   // Disable the leveling matrix before homing
   #if HAS_LEVELING
+
+    // Cancel the active G29 session
+    #if ENABLED(PROBE_MANUALLY)
+      g29_in_progress = false;
+    #endif
+
     #if ENABLED(RESTORE_LEVELING_AFTER_G28)
       const bool leveling_was_active = planner.leveling_active;
     #endif
@@ -350,9 +362,43 @@ void GcodeSuite::G28(const bool always_home_all) {
       } // home_all || homeZ
     #endif // Z_HOME_DIR < 0
 
-    SYNC_PLAN_POSITION_KINEMATIC();
+    sync_plan_position();
 
   #endif // !DELTA (G28)
+
+  /**
+   * Preserve DXC mode across a G28 for IDEX printers in DXC_DUPLICATION_MODE.
+   * This is important because it lets a user use the LCD Panel to set an IDEX Duplication mode, and
+   * then print a standard GCode file that contains a single print that does a G28 and has no other
+   * IDEX specific commands in it.
+   */
+  #if ENABLED(DUAL_X_CARRIAGE)
+
+    if (dxc_is_duplicating()) {
+
+      // Always home the 2nd (right) extruder first
+      active_extruder = 1;
+      homeaxis(X_AXIS);
+
+      // Remember this extruder's position for later tool change
+      inactive_extruder_x_pos = current_position[X_AXIS];
+
+      // Home the 1st (left) extruder
+      active_extruder = 0;
+      homeaxis(X_AXIS);
+
+      // Consider the active extruder to be parked
+      COPY(raised_parked_position, current_position);
+      delayed_move_time = 0;
+      active_extruder_parked = true;
+      extruder_duplication_enabled = IDEX_saved_duplication_state;
+      extruder_duplication_enabled = false;
+
+      dual_x_carriage_mode         = IDEX_saved_mode;
+      stepper.set_directions();
+    }
+
+  #endif // DUAL_X_CARRIAGE
 
   endstops.not_homing();
 
@@ -361,7 +407,7 @@ void GcodeSuite::G28(const bool always_home_all) {
     do_blocking_move_to_z(delta_clip_start_height);
   #endif
 
-  #if ENABLED(RESTORE_LEVELING_AFTER_G28)
+  #if HAS_LEVELING && ENABLED(RESTORE_LEVELING_AFTER_G28)
     set_bed_leveling_enabled(leveling_was_active);
   #endif
 
@@ -377,7 +423,7 @@ void GcodeSuite::G28(const bool always_home_all) {
     tool_change(old_tool_index, 0, NO_FETCH);
   #endif
 
-  lcd_refresh();
+  ui.refresh();
 
   report_current_position();
   #if ENABLED(NANODLP_Z_SYNC)
