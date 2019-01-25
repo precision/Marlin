@@ -412,9 +412,9 @@
   //#define DEFAULT_Ki 2.25
   //#define DEFAULT_Kd 440
 
-  #define  DEFAULT_Kp 23.69
-  #define  DEFAULT_Ki 2.21
-  #define  DEFAULT_Kd 63.57
+  #define  DEFAULT_Kp 53.81
+  #define  DEFAULT_Ki 7.82
+  #define  DEFAULT_Kd 92.57
 #endif // PIDTEMP
 
 //===========================================================================
