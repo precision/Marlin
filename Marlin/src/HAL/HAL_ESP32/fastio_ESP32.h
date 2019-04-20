@@ -37,7 +37,7 @@
 #define _PULLUP(IO, v)          pinMode(IO, v ? INPUT_PULLUP : INPUT)
 
 // Read a pin wrapper
-#define READ(IO)                digitalRead(IO)
+#define READ(IO)                (TEST(IO, 7) ? i2s_state(IO & 0x7F) : digitalRead(IO))
 
 // Write to a pin wrapper
 #define WRITE(IO, v)            (TEST(IO, 7) ? i2s_write(IO & 0x7F, v) : digitalWrite(IO, v))
@@ -63,6 +63,9 @@
 
 #define PWM_PIN(P)              true
 #define USEABLE_HARDWARE_PWM(P) PWM_PIN(P)
+
+// Toggle pin value
+#define TOGGLE(IO)              WRITE(IO, !READ(IO))
 
 //
 // Ports and functions
