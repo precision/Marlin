@@ -1,6 +1,6 @@
 /**
  * Marlin 3D Printer Firmware
- * Copyright (C) 2016 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
+ * Copyright (C) 2019 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
  *
  * Based on Sprinter and grbl.
  * Copyright (C) 2011 Camiel Gubbels / Erik van der Zalm
@@ -80,7 +80,7 @@ void ac_home() {
 
 void ac_setup(const bool reset_bed) {
   #if HOTENDS > 1
-    tool_change(0, 0, true);
+    tool_change(0, true);
   #endif
 
   planner.synchronize();
@@ -104,7 +104,7 @@ void ac_cleanup(
   #endif
   clean_up_after_endstop_or_probe_move();
   #if HOTENDS > 1
-    tool_change(old_tool_index, 0, true);
+    tool_change(old_tool_index, true);
   #endif
 }
 
@@ -649,7 +649,7 @@ void GcodeSuite::G33() {
       else { // !end iterations
         char mess[15];
         if (iterations < 31)
-          sprintf_P(mess, PSTR("Iteration : %02i"), (int)iterations);
+          sprintf_P(mess, PSTR("Iteration : %02i"), (unsigned int)iterations);
         else
           strcpy_P(mess, PSTR("No convergence"));
         SERIAL_ECHO(mess);
